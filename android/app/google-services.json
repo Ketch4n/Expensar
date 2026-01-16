@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "919519153121",
+    "project_id": "expensar-a0926",
+    "storage_bucket": "expensar-a0926.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:919519153121:android:9f01ada1a3bae37888a0a0",
+        "android_client_info": {
+          "package_name": "com.example.expensar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBMAOXcbv2pHVTDw-15hky8eKnlybAAJDY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
