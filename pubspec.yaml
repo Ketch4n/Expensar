@@ -1,7 +1,7 @@
 name: expensar
 description: "A new Flutter project."
 publish_to: "none"
-version: 0.1.1
+version: 0.2.0
 
 environment:
   sdk: ^3.10.4
@@ -18,3 +18,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - shorebird.yaml
