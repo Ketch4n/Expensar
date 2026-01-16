@@ -3,15 +3,13 @@ platform :ios, '15.0'
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
-
-  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  
+  # We will leave this empty; the script in Step 2 will fix it
 end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
     target.build_configurations.each do |config|
-      # This ensures every plugin uses iOS 15.0
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
     end
   end
