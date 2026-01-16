@@ -1,5 +1,5 @@
 import 'package:expensar/firebase_options.dart';
-import 'package:expensar/src/view/homePage.dart';
+import 'package:expensar/src/view/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 

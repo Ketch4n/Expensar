@@ -1,0 +1,34 @@
+workflows:
+  default-workflow:
+    name: Default Workflow
+    instance_type: mac_mini
+    max_build_duration: 120
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Run analysis
+        script: |
+          flutter analyze
+      - name: Run tests
+        script: |
+          flutter test
+      - name: Build APK
+        script: |
+          flutter build apk --release
+      - name: Build IPA
+        script: |
+          flutter build ios --release --no-codesign
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
+      - build/ios/iphoneos/Runner.app
+    publishing:
+      slack:
+        channel: "#builds"
+        notify_on_build_start: true
+        notify_on_build_failure: true
+        notify_on_build_success: true
