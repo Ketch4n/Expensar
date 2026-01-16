@@ -16,7 +16,7 @@ class _HomepageState extends State<Homepage> {
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [const Text('HOMEPAGE')],
+          children: [const Text('HOMEPAGE - TEST PATCH 0.2.2')],
         ),
       ),
       floatingActionButton: FloatingActionButton(
