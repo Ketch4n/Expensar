@@ -1,7 +1,43 @@
-- name: Extract Version from pubspec.yaml
-  id: extract_version
-  run: |
-    # This line finds 'version: 1.0.0+1' and turns it into 'v1.0.0'
-    raw_version=$(grep '^version: ' pubspec.yaml | cut -d ' ' -f 2 | cut -d '+' -f 1)
-    echo "VERSION=v$raw_version" >> $GITHUB_ENV
-    echo "tag=$raw_version" >> $GITHUB_OUTPUT
+name: Auto Tag from Pubspec
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Extract Version from pubspec.yaml
+        id: extract_version
+        run: |
+          # This line finds 'version: 1.0.0+1' and turns it into 'v1.0.0'
+          raw_version=$(grep '^version: ' pubspec.yaml | cut -d ' ' -f 2 | cut -d '+' -f 1)
+          echo "VERSION=v$raw_version" >> $GITHUB_ENV
+          echo "tag=$raw_version" >> $GITHUB_OUTPUT
+
+      - name: Create Tag
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/${{ env.VERSION }}',
+              sha: context.sha
+            })
+          continue-on-error: true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: Release ${{ env.VERSION }}
+          generate_release_notes: true
