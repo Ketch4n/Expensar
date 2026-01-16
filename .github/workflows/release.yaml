@@ -1,0 +1,43 @@
+name: Auto Tag from Pubspec
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Extract Version from pubspec.yaml
+        id: extract_version
+        run: |
+          # Finds the version line (e.g., version: 1.0.2+3) and grabs '1.0.2'
+          VERSION=$(grep '^version: ' pubspec.yaml | sed ' -e "s/version: //" -e "s/+.*//"')
+          echo "VERSION=v$VERSION" >> $GITHUB_ENV
+          echo "tag=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Tag
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: 'refs/tags/${{ env.VERSION }}',
+              sha: context.sha
+            })
+          continue-on-error: true # Prevents failure if tag already exists
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: Release ${{ env.VERSION }}
+          generate_release_notes: true
