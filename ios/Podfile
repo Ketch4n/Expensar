@@ -1,25 +1,14 @@
-# 1. This line is the "magic" that fixes the 'undefined method' error
-target_local_resource = File.join('..', '..', 'flutter', 'packages', 'flutter_tools', 'bin', 'xcode_backend.sh')
-load File.join(File.dirname(__FILE__), 'Flutter', 'podhelper.rb')
-
-# 2. Set the deployment target to 15.0 for Firebase
 platform :ios, '15.0'
-
-expose_pods_methods_to_flutter = true
 
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
-
-  # 3. This now works because of the 'load' command above
-  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  
+  # We will leave this empty; the script in Step 2 will fix it
 end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
-    
-    # 4. Forces all sub-plugins to match iOS 15.0
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
     end
