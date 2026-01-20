@@ -7,7 +7,6 @@ workflows:
     environment:
       flutter: stable
       xcode: latest
-
       groups:
         - FIREBASE_SERVICE
 
@@ -31,13 +30,12 @@ workflows:
 
     publishing:
       firebase:
+        token: $FIREBASE_TOKEN
         android:
           app_id: $FIREBASE_ANDROID_APP_ID
-          token: $FIREBASE_TOKEN
           groups:
             - Beta-Tester
         ios:
           app_id: $FIREBASE_IOS_APP_ID
-          token: $FIREBASE_TOKEN
           groups:
             - Beta-Tester
