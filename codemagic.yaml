@@ -30,9 +30,11 @@ workflows:
       firebase:
         android:
           app_id: $FIREBASE_ANDROID_APP_ID
+          service_account: $FIREBASE_SERVICE_ACCOUNT
           groups:
-            - Beta-Tester
+            - testers
         ios:
           app_id: $FIREBASE_IOS_APP_ID
+          service_account: $FIREBASE_SERVICE_ACCOUNT
           groups:
-            - Beta-Tester
+            - testers
