@@ -1,27 +1,35 @@
 workflows:
-  release-workflow:
-    name: Android + iOS (Mac Build)
+  default-workflow:
+    name: Default Workflow
     instance_type: mac_mini
     max_build_duration: 120
-
     environment:
       flutter: stable
       xcode: latest
+      cocoapods: default
       groups:
-        - FIREBASE_SERVICE
-
-      vars:
-        FIREBASE_IOS_APP_ID: "1:919519153121:ios:fd93817fff43360f88a0a0"
-        FIREBASE_ANDROID_APP_ID: "1:919519153121:android:9f01ada1a3bae37888a0a0"
+        - firebase_credentials
 
     scripts:
-      - name: Build on macOS
+      - name: Get Flutter packages
         script: |
-          set -e
           flutter pub get
+
+      - name: Run analysis
+        script: |
           flutter analyze
+
+      - name: Run tests
+        script: |
           flutter test
+
+      - name: Build APK
+        script: |
           flutter build apk --release
+
+      # IMPORTANT: Build an IPA (not just Runner.app)
+      - name: Build IPA
+        script: |
           flutter build ipa --release
 
     artifacts:
@@ -30,12 +38,22 @@ workflows:
 
     publishing:
       firebase:
-        token: $FIREBASE_TOKEN
+        # Use Firebase CI token for authentication
+        firebase_token: $FIREBASE_TOKEN
+
         android:
-          app_id: $FIREBASE_ANDROID_APP_ID
+          # Android App ID from Firebase console (Project settings > General)
+          app_id: 1:919519153121:android:9f01ada1a3bae37888a0a0
           groups:
-            - Beta-Tester
+            - androidTesters
+          artifact_type: apk
+
         ios:
-          app_id: $FIREBASE_IOS_APP_ID
+          # iOS App ID from Firebase console (Project settings > General)
+          app_id: 1:919519153121:ios:fd93817fff43360f88a0a0
           groups:
-            - Beta-Tester
+            - iosTesters
+
+      slack:
+        channel: "#builds"
+        notify_on_build_start: true
