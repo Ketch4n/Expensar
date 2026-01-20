@@ -8,6 +8,9 @@ workflows:
       flutter: stable
       xcode: latest
 
+      groups:
+        - FIREBASE_SERVICE
+
       vars:
         FIREBASE_IOS_APP_ID: "1:919519153121:ios:fd93817fff43360f88a0a0"
         FIREBASE_ANDROID_APP_ID: "1:919519153121:android:9f01ada1a3bae37888a0a0"
@@ -30,11 +33,11 @@ workflows:
       firebase:
         android:
           app_id: $FIREBASE_ANDROID_APP_ID
-          service_account: $FIREBASE_SERVICE_ACCOUNT
+          service_account: $FIREBASE_TOKEN
           groups:
-            - testers
+            - Beta-Tester
         ios:
           app_id: $FIREBASE_IOS_APP_ID
-          service_account: $FIREBASE_SERVICE_ACCOUNT
+          service_account: $FIREBASE_TOKEN
           groups:
-            - testers
+            - Beta-Tester
