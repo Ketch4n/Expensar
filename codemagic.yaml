@@ -1,8 +1,9 @@
 workflows:
   default-workflow:
     name: Default Workflow
-    instance_type: mac_m2
+    instance_type: mac_mini_m2
     max_build_duration: 120
+
     environment:
       flutter: stable
       xcode: latest
@@ -12,25 +13,19 @@ workflows:
 
     scripts:
       - name: Get Flutter packages
-        script: |
-          flutter pub get
+        script: flutter pub get
 
       - name: Run analysis
-        script: |
-          flutter analyze
+        script: flutter analyze
 
       - name: Run tests
-        script: |
-          flutter test
+        script: flutter test
 
       - name: Build APK
-        script: |
-          flutter build apk --release
+        script: flutter build apk --release
 
-      # IMPORTANT: Build an IPA (not just Runner.app)
       - name: Build IPA
-        script: |
-          flutter build ipa --release
+        script: flutter build ipa --release
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
@@ -38,18 +33,15 @@ workflows:
 
     publishing:
       firebase:
-        # Use Firebase CI token for authentication
-        firebase_token: $FIREBASE_TOKEN
+        firebase_service_account: $FIREBASE_SERVICE_ACCOUNT
 
         android:
-          # Android App ID from Firebase console (Project settings > General)
           app_id: 1:919519153121:android:9f01ada1a3bae37888a0a0
           groups:
             - androidTesters
           artifact_type: apk
 
         ios:
-          # iOS App ID from Firebase console (Project settings > General)
           app_id: 1:919519153121:ios:fd93817fff43360f88a0a0
           groups:
             - iosTesters
