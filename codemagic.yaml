@@ -1,37 +1,25 @@
 workflows:
-  default-workflow:
-    name: Android & iOS Release
+  release-workflow:
+    name: Android + iOS (Mac Build)
     instance_type: mac_mini
     max_build_duration: 120
 
     environment:
       flutter: stable
       xcode: latest
-      cocoapods: default
 
       vars:
         FIREBASE_IOS_APP_ID: "1:919519153121:ios:fd93817fff43360f88a0a0"
         FIREBASE_ANDROID_APP_ID: "1:919519153121:android:9f01ada1a3bae37888a0a0"
 
     scripts:
-      - name: Get Flutter packages
+      - name: Build on macOS
         script: |
+          set -e
           flutter pub get
-
-      - name: Run analysis
-        script: |
           flutter analyze
-
-      - name: Run tests
-        script: |
           flutter test
-
-      - name: Build Android APK
-        script: |
           flutter build apk --release
-
-      - name: Build iOS IPA (signed)
-        script: |
           flutter build ipa --release
 
     artifacts:
@@ -48,9 +36,3 @@ workflows:
           app_id: $FIREBASE_IOS_APP_ID
           groups:
             - Beta-Tester
-
-      slack:
-        channel: "#builds"
-        notify_on_build_start: true
-        notify_on_build_failure: true
-        notify_on_build_success: true
