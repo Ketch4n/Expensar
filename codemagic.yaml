@@ -24,12 +24,12 @@ workflows:
       - name: Build APK
         script: flutter build apk --release
 
-      - name: Build IPA
-        script: flutter build ipa --release
+      # - name: Build IPA
+      #   script: flutter build ipa --release
 
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
-      - build/ios/ipa/*.ipa
+      # - build/ios/ipa/*.ipa
 
     publishing:
       firebase:
@@ -41,10 +41,10 @@ workflows:
             - androidTesters
           artifact_type: apk
 
-        ios:
-          app_id: 1:919519153121:ios:fd93817fff43360f88a0a0
-          groups:
-            - iosTesters
+        # ios:
+        #   app_id: 1:919519153121:ios:fd93817fff43360f88a0a0
+        #   groups:
+        #     - iosTesters
 
       slack:
         channel: "#builds"
