@@ -33,7 +33,7 @@ workflows:
 
     publishing:
       firebase:
-        firebase_service_account: $FIREBASE_SERVICE_ACCOUNT
+        firebase_token: $FIREBASE_TOKEN
 
         android:
           app_id: 1:919519153121:android:9f01ada1a3bae37888a0a0
