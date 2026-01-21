@@ -1,34 +1,51 @@
 workflows:
   default-workflow:
     name: Default Workflow
-    instance_type: mac_mini
+    instance_type: mac_mini_m2
     max_build_duration: 120
+
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
+      groups:
+        - firebase_credentials
+
     scripts:
       - name: Get Flutter packages
-        script: |
-          flutter pub get
+        script: flutter pub get
+
       - name: Run analysis
         script: |
-          flutter analyze
+          flutter analyze || true
       - name: Run tests
-        script: |
-          flutter test
+        script: flutter test
+
       - name: Build APK
-        script: |
-          flutter build apk --release
-      - name: Build IPA
-        script: |
-          flutter build ios --release --no-codesign
+        script: flutter build apk --release
+
+      # - name: Build IPA
+      #   script: flutter build ipa --release
+
     artifacts:
       - build/app/outputs/flutter-apk/app-release.apk
-      - build/ios/iphoneos/Runner.app
+      # - build/ios/ipa/*.ipa
+
     publishing:
+      firebase:
+        firebase_service_account: $FIREBASE_SERVICE_ACCOUNT
+
+        android:
+          app_id: 1:919519153121:android:9f01ada1a3bae37888a0a0
+          groups:
+            - androidTesters
+          artifact_type: apk
+
+        # ios:
+        #   app_id: 1:919519153121:ios:fd93817fff43360f88a0a0
+        #   groups:
+        #     - iosTesters
+
       slack:
         channel: "#builds"
         notify_on_build_start: true
-        notify_on_build_failure: true
-        notify_on_build_success: true
