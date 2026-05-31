@@ -198,25 +198,10 @@ class _StatsScreenState extends State<StatsScreen> {
       _wallets,
       days: 14,
     );
-    final chartData = dailySpending.every((d) => d == 0)
-        ? [
-            150.0,
-            280.0,
-            180.0,
-            320.0,
-            220.0,
-            180.0,
-            469.0,
-            350.0,
-            200.0,
-            420.0,
-            150.0,
-            300.0,
-            250.0,
-            380.0,
-          ]
-        : dailySpending;
-    final maxY = chartData.reduce((a, b) => a > b ? a : b) * 1.3;
+    final chartData = dailySpending;
+    final maxY = chartData.every((d) => d == 0)
+        ? 100.0
+        : chartData.reduce((a, b) => a > b ? a : b) * 1.3;
     final now = DateTime.now();
     final days = List.generate(14, (i) {
       final day = now.subtract(Duration(days: 13 - i));

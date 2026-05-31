@@ -100,41 +100,74 @@ class _AddWalletDialogState extends State<AddWalletDialog> {
                     : null,
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedType,
-                decoration: InputDecoration(
-                  labelText: 'Account Type',
-                  prefixIcon: const Icon(Icons.category_outlined),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  filled: true,
-                  fillColor: AppColors.background,
+              const Text(
+                'Account Type',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
                 ),
-                items: _walletTypes.map((type) {
-                  final icon = switch (type) {
-                    'Debit' => Icons.credit_card,
-                    'Credit' => Icons.credit_score,
-                    'Loans' => Icons.handshake,
-                    'Assets' => Icons.account_balance,
-                    'Stocks' => Icons.show_chart,
-                    'Crypto' => Icons.currency_bitcoin,
-                    _ => Icons.wallet,
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: _walletTypes.map((type) {
+                  final isSelected = _selectedType == type;
+                  final (icon, color) = switch (type) {
+                    'Debit' => (Icons.credit_card, AppColors.secondary),
+                    'Credit' => (Icons.credit_score, const Color(0xFFE91E63)),
+                    'Loans' => (Icons.handshake, AppColors.warning),
+                    'Assets' => (Icons.account_balance, AppColors.primary),
+                    'Stocks' => (Icons.show_chart, const Color(0xFF9C27B0)),
+                    'Crypto' => (
+                      Icons.currency_bitcoin,
+                      const Color(0xFFF57C00),
+                    ),
+                    _ => (Icons.wallet, Colors.grey),
                   };
-                  return DropdownMenuItem(
-                    value: type,
-                    child: Row(
-                      children: [
-                        Icon(icon, size: 18, color: Colors.grey[600]),
-                        const SizedBox(width: 8),
-                        Text(type),
-                      ],
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedType = type),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? color.withValues(alpha: 0.1)
+                            : Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected ? color : Colors.grey.shade200,
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            icon,
+                            size: 18,
+                            color: isSelected ? color : Colors.grey[500],
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            type,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              color: isSelected ? color : Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }).toList(),
-                onChanged: (type) {
-                  if (type != null) setState(() => _selectedType = type);
-                },
               ),
               const SizedBox(height: 16),
               TextFormField(

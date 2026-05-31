@@ -7,7 +7,6 @@ import '../models/loan.dart';
 import '../services/database_service.dart';
 import '../services/dashboard_helper.dart';
 import '../theme/app_theme.dart';
-import '../widgets/greeting_card.dart';
 import '../widgets/spending_chart.dart';
 import '../widgets/payday_card.dart';
 import '../widgets/transaction_list.dart';
@@ -19,6 +18,8 @@ import 'debts_screen.dart';
 import 'budgets_screen.dart';
 import 'stats_screen.dart';
 import 'profile_screen.dart';
+import 'notifications_screen.dart';
+import 'settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -32,9 +33,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Budget> _budgets = [];
   List<Credit> _credits = [];
   List<Loan> _loans = [];
-  String _userName = 'Friend';
 
-  int _currentIndex = 0;
+  int _currentIndex = 1;
   late final PageController _pageController;
 
   // Scroll-hide state
@@ -43,7 +43,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: 0);
+    _pageController = PageController(initialPage: 1);
+    _currentIndex = 1;
     _loadData();
   }
 
@@ -58,19 +59,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final budgets = await DatabaseService.getBudgets();
     final credits = await DatabaseService.getCredits();
     final loans = await DatabaseService.getLoans();
-    final name = await DatabaseService.getSetting('userName');
     if (!mounted) return;
     setState(() {
       _wallets = wallets;
       _budgets = budgets;
       _credits = credits;
       _loans = loans;
-      _userName = name ?? 'Friend';
     });
   }
 
   void _onPageChanged(int index) {
-    setState(() => _currentIndex = index);
+    setState(() {
+      _currentIndex = index;
+      // Hide nav on Stats (index 0), show on Home (1) and Wallets (2)
+      if (index == 0) {
+        _isNavVisible = false;
+      } else {
+        _isNavVisible = true;
+      }
+    });
   }
 
   void _onNavTapped(int index) {
@@ -82,6 +89,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   bool _handleScrollNotification(ScrollNotification notification) {
+    // Always show nav bar on Wallets screen (index 2), always hide on Stats (index 0)
+    if (_currentIndex == 2) {
+      if (!_isNavVisible) setState(() => _isNavVisible = true);
+      return false;
+    }
+    if (_currentIndex == 0) return false;
+
     if (notification is ScrollUpdateNotification) {
       final delta = notification.scrollDelta ?? 0;
 
@@ -107,8 +121,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           controller: _pageController,
           onPageChanged: _onPageChanged,
           children: [
-            _buildHomePage(),
             const StatsScreen(),
+            _buildHomePage(),
             const WalletsScreen(),
           ],
         ),
@@ -151,8 +165,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _navItem(Icons.home_rounded, 'Home', 0),
-                      _navItem(Icons.bar_chart_rounded, 'Stats', 1),
+                      _navItem(Icons.home_rounded, 'Home', 1),
                       _navItem(Icons.wallet_rounded, 'Wallet', 2),
                     ],
                   ),
@@ -234,6 +247,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final totalBalance = _wallets.fold<double>(0, (sum, w) => sum + w.balance);
     final dailySpending = DashboardHelper.calculateDailySpending(_wallets);
     final todayTotal = dailySpending.last;
+    final weekTotal = dailySpending.fold<double>(0, (sum, d) => sum + d);
+    final monthlySpending = _calculateMonthlySpending();
 
     return SafeArea(
       bottom: false,
@@ -257,12 +272,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.notifications_outlined),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const NotificationsScreen(),
+                          ),
+                        );
+                      },
                       color: Colors.grey[600],
                     ),
                     IconButton(
                       icon: const Icon(Icons.settings_outlined),
-                      onPressed: () {},
+                      onPressed: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsScreen(),
+                          ),
+                        );
+                        _loadData();
+                      },
                       color: Colors.grey[600],
                     ),
                     GestureDetector(
@@ -299,22 +329,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
-                  GreetingCard(userName: _userName),
-                  const SizedBox(height: 20),
                   _buildQuickActions(),
                   const SizedBox(height: 20),
                   _buildWalletSummary(totalBalance),
                   const SizedBox(height: 20),
                   SpendingChart(
-                    data: dailySpending.every((d) => d == 0)
-                        ? [150, 280, 180, 320, 220, 180, 469]
-                        : dailySpending,
+                    data: dailySpending,
                     todayAmount: todayTotal,
+                    weekTotal: weekTotal,
+                    monthTotal: monthlySpending,
                   ),
-                  const SizedBox(height: 20),
-                  _buildUpcomingBills(),
-                  const SizedBox(height: 20),
-                  _buildPaydayCard(),
+                  ..._buildConditionalSections(),
                   const SizedBox(height: 20),
                   _buildUpcomingTransactions(),
                   // Extra padding so content isn't hidden behind floating nav
@@ -326,6 +351,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildConditionalSections() {
+    final widgets = <Widget>[];
+    final bills = _buildUpcomingBills();
+    final payday = _buildPaydayCard();
+
+    if (bills is! SizedBox) {
+      widgets.add(const SizedBox(height: 20));
+      widgets.add(bills);
+    }
+    if (payday is! SizedBox) {
+      widgets.add(const SizedBox(height: 20));
+      widgets.add(payday);
+    }
+    return widgets;
+  }
+
+  double _calculateMonthlySpending() {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    double total = 0;
+    for (final wallet in _wallets) {
+      for (final log in wallet.logs) {
+        if (log.date.isAfter(startOfMonth) || log.date == startOfMonth) {
+          final desc = log.description.toLowerCase();
+          if (desc.contains('send') ||
+              desc.contains('payment') ||
+              desc.contains('transfer to')) {
+            total += log.amount;
+          }
+        }
+      }
+    }
+    return total;
   }
 
   Widget _buildQuickActions() {

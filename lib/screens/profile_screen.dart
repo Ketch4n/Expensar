@@ -10,7 +10,6 @@ import '../models/loan.dart';
 import '../services/database_service.dart';
 import '../services/backup_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/app_header.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -25,11 +24,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   List<Credit> _credits = [];
   List<Debt> _debts = [];
   List<Loan> _loans = [];
+  String _userName = 'User';
+  bool _isEditingName = false;
+  final _nameController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -38,6 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final credits = await DatabaseService.getCredits();
     final debts = await DatabaseService.getDebts();
     final loans = await DatabaseService.getLoans();
+    final name = await DatabaseService.getSetting('userName');
     if (!mounted) return;
     setState(() {
       _wallets = wallets;
@@ -45,349 +54,460 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _credits = credits;
       _debts = debts;
       _loans = loans;
+      _userName = name ?? 'User';
+      _nameController.text = _userName;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: CustomScrollView(
+        slivers: [
+          // Collapsing header with profile info
+          SliverAppBar(
+            expandedHeight: 200,
+            pinned: true,
+            backgroundColor: AppColors.primary,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppColors.primary, AppColors.primaryLight],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: SafeArea(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 24),
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.4),
+                            width: 2,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _userName.isNotEmpty
+                                ? _userName[0].toUpperCase()
+                                : 'U',
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        _userName,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Member since ${DateFormat('MMM yyyy').format(DateTime.now())}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.white.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Content
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: [
+                  _buildNameSection(),
+                  const SizedBox(height: 20),
+                  _buildQuickStats(),
+                  const SizedBox(height: 24),
+                  _buildMenuSection('Data Management', [
+                    _MenuItem(
+                      icon: Icons.upload_rounded,
+                      title: 'Export Backup',
+                      subtitle: 'Save data as JSON',
+                      color: AppColors.secondary,
+                      onTap: _exportData,
+                    ),
+                    _MenuItem(
+                      icon: Icons.download_rounded,
+                      title: 'Import Backup',
+                      subtitle: 'Restore from file',
+                      color: AppColors.primary,
+                      onTap: _importData,
+                    ),
+                  ]),
+                  const SizedBox(height: 16),
+                  _buildMenuSection('Danger Zone', [
+                    _MenuItem(
+                      icon: Icons.delete_forever_rounded,
+                      title: 'Reset All Data',
+                      subtitle: 'Permanently delete everything',
+                      color: AppColors.error,
+                      onTap: _showResetDialog,
+                    ),
+                  ]),
+                  const SizedBox(height: 24),
+                  _buildAppInfo(),
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNameSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: AppDecorations.card(),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.person_rounded,
+              color: AppColors.primary,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: _isEditingName
+                ? TextField(
+                    controller: _nameController,
+                    autofocus: true,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Enter your name',
+                      hintStyle: TextStyle(color: Colors.grey[400]),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    onSubmitted: (_) => _saveName(),
+                  )
+                : Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _userName,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Display Name',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
+                    ],
+                  ),
+          ),
+          GestureDetector(
+            onTap: _isEditingName
+                ? _saveName
+                : () => setState(() => _isEditingName = true),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: _isEditingName ? AppColors.primary : Colors.grey[100],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                _isEditingName ? 'Save' : 'Edit',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _isEditingName ? Colors.white : Colors.grey[600],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveName() async {
+    final name = _nameController.text.trim();
+    if (name.isNotEmpty) {
+      await DatabaseService.setSetting('userName', name);
+      setState(() {
+        _userName = name;
+        _isEditingName = false;
+      });
+    } else {
+      setState(() => _isEditingName = false);
+    }
+  }
+
+  Widget _buildQuickStats() {
     final totalBalance = _wallets.fold<double>(0, (sum, w) => sum + w.balance);
-    final totalBills = _budgets
-        .where((b) => b.status == 'Upcoming')
-        .fold<double>(0, (sum, b) => sum + b.amount);
     final totalDebt =
         _debts.fold<double>(0, (sum, d) => sum + d.remainingBalance) +
         _loans.fold<double>(0, (sum, l) => sum + l.balance) +
         _credits.fold<double>(0, (sum, c) => sum + c.outstandingBalance);
+    final upcomingBills = _budgets
+        .where((b) => b.status == 'Upcoming')
+        .fold<double>(0, (sum, b) => sum + b.amount);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const AppHeader(title: 'Profile'),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    _buildProfileHeader(),
-                    const SizedBox(height: 20),
-                    _buildFinancialSummary(totalBalance, totalBills, totalDebt),
-                    const SizedBox(height: 20),
-                    _buildSettingsSection(),
-                    const SizedBox(height: 20),
-                    _buildAboutSection(),
-                    const SizedBox(height: 20),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileHeader() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryLight],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.person, color: Colors.white, size: 32),
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Expensar User',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Personal Finance Manager',
-                  style: TextStyle(fontSize: 13, color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Text(
-              'v1.0',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFinancialSummary(
-    double totalBalance,
-    double totalBills,
-    double totalDebt,
-  ) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: AppDecorations.card(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('FINANCIAL SNAPSHOT', style: AppTextStyles.sectionLabel),
-          const SizedBox(height: 16),
-          _summaryRow(
-            Icons.account_balance_wallet,
-            'Net Worth',
-            '₱${NumberFormat('#,##0').format(totalBalance)}',
-            AppColors.primary,
-          ),
-          const SizedBox(height: 12),
-          _summaryRow(
-            Icons.receipt_outlined,
-            'Upcoming Bills',
-            '₱${NumberFormat('#,##0').format(totalBills)}',
-            AppColors.secondary,
-          ),
-          const SizedBox(height: 12),
-          _summaryRow(
-            Icons.trending_down,
-            'Total Debt',
-            '₱${NumberFormat('#,##0').format(totalDebt)}',
-            AppColors.error,
-          ),
-          const SizedBox(height: 12),
-          _summaryRow(
-            Icons.wallet,
-            'Wallets',
-            '${_wallets.length} active',
-            AppColors.warning,
-          ),
-          const SizedBox(height: 12),
-          _summaryRow(
-            Icons.credit_card,
-            'Credit Cards',
-            '${_credits.length} cards',
-            AppColors.accent,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryRow(IconData icon, String label, String value, Color color) {
-    return Row(
-      children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color, size: 18),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSettingsSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('SETTINGS', style: AppTextStyles.sectionLabel),
-          const SizedBox(height: 16),
-          _settingsTile(
-            Icons.notifications_outlined,
-            'Notifications',
-            'Bill reminders & alerts',
-          ),
-          _settingsTile(
-            Icons.palette_outlined,
-            'Appearance',
-            'Theme & display settings',
-          ),
-          _settingsTile(Icons.lock_outline, 'Security', 'App lock & privacy'),
-          _settingsTile(
-            Icons.upload_outlined,
-            'Export Data',
-            'Save all data as JSON file',
-            onTap: _exportData,
-          ),
-          _settingsTile(
-            Icons.download_outlined,
-            'Import Data',
-            'Restore from a JSON backup',
-            onTap: _importData,
-          ),
-          _settingsTile(
-            Icons.delete_outline,
-            'Reset Data',
-            'Clear all app data',
-            color: AppColors.error,
-            onTap: _showResetDialog,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _settingsTile(
-    IconData icon,
-    String title,
-    String subtitle, {
-    Color color = AppColors.textPrimary,
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: color,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAboutSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('ABOUT', style: AppTextStyles.sectionLabel),
-          const SizedBox(height: 16),
           Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
+              const Icon(
+                Icons.insights_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Financial Overview',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
                 ),
-                child: const Icon(
-                  Icons.savings_outlined,
-                  color: AppColors.primary,
-                  size: 24,
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _statTile(
+                  'Net Worth',
+                  '₱${NumberFormat('#,##0').format(totalBalance)}',
+                  AppColors.primary,
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Expensar',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    Text(
-                      'Version 1.0.0',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
+              Expanded(
+                child: _statTile(
+                  'Total Debt',
+                  '₱${NumberFormat('#,##0').format(totalDebt)}',
+                  AppColors.error,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          Text(
-            'Your personal finance companion. Track wallets, budgets, loans, and debts all in one place.',
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey[600],
-              height: 1.4,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: _statTile(
+                  'Upcoming Bills',
+                  '₱${NumberFormat('#,##0').format(upcomingBills)}',
+                  AppColors.warning,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _statTile(
+                  'Accounts',
+                  '${_wallets.length} wallets',
+                  AppColors.secondary,
+                ),
+              ),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _statTile(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[500],
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuSection(String title, List<_MenuItem> items) {
+    return Container(
+      decoration: AppDecorations.card(),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
+            child: Text(title.toUpperCase(), style: AppTextStyles.sectionLabel),
+          ),
+          ...items.asMap().entries.map((entry) {
+            final item = entry.value;
+            final isLast = entry.key == items.length - 1;
+            return Column(
+              children: [
+                InkWell(
+                  onTap: item.onTap,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: item.color.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(11),
+                          ),
+                          child: Icon(item.icon, color: item.color, size: 20),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.title,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: item.color == AppColors.error
+                                      ? AppColors.error
+                                      : AppColors.textPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                item.subtitle,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: Colors.grey[350],
+                          size: 22,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (!isLast)
+                  Divider(height: 1, indent: 74, color: Colors.grey[100]),
+              ],
+            );
+          }),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppInfo() {
+    return Column(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Icon(
+            Icons.savings_rounded,
+            color: AppColors.primary,
+            size: 26,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Expensar',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Version 1.0.0',
+          style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Your personal finance companion',
+          style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+        ),
+      ],
     );
   }
 
@@ -395,8 +515,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final filePath = await BackupService.exportData();
       if (!mounted) return;
-
-      // Share the file
       await Share.shareXFiles([XFile(filePath)], text: 'Expensar Backup');
     } catch (e) {
       if (!mounted) return;
@@ -416,10 +534,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (result == null || result.files.single.path == null) return;
-
     if (!mounted) return;
 
-    // Confirm before overwriting
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -477,22 +593,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Reset All Data?',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: AppColors.textPrimary,
-          ),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_rounded, color: AppColors.error, size: 24),
+            SizedBox(width: 10),
+            Text(
+              'Reset All Data?',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
         ),
         content: const Text(
-          'This will permanently delete all your wallets, budgets, loans, debts, and credits. This action cannot be undone.',
+          'This will permanently delete all your wallets, budgets, loans, debts, and credits. This cannot be undone.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () async {
               await DatabaseService.clearAllData();
               if (context.mounted) {
@@ -506,16 +628,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
               _loadData();
             },
-            child: const Text(
-              'Reset',
-              style: TextStyle(
-                color: AppColors.error,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Reset Everything'),
           ),
         ],
       ),
     );
   }
+}
+
+class _MenuItem {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _MenuItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    this.onTap,
+  });
 }

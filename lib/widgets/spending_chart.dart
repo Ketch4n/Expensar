@@ -1,19 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:intl/intl.dart';
 import '../theme/app_theme.dart';
 
 class SpendingChart extends StatelessWidget {
   final List<double> data;
   final double todayAmount;
+  final double weekTotal;
+  final double monthTotal;
 
   const SpendingChart({
     super.key,
     required this.data,
     required this.todayAmount,
+    this.weekTotal = 0,
+    this.monthTotal = 0,
   });
+
+  List<String> _getDayLabels() {
+    final now = DateTime.now();
+    const dayLetters = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    return List.generate(data.length, (i) {
+      final day = now.subtract(Duration(days: data.length - 1 - i));
+      return dayLetters[day.weekday - 1];
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final dayLabels = _getDayLabels();
+    final hasData = data.any((d) => d > 0);
+    final maxY = hasData ? data.reduce((a, b) => a > b ? a : b) * 1.2 : 100.0;
+
+    // Calculate comparison with yesterday
+    final yesterday = data.length >= 2 ? data[data.length - 2] : 0.0;
+    final isUp = todayAmount > yesterday;
+    final diff = todayAmount - yesterday;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: AppDecorations.card(),
@@ -24,7 +47,7 @@ class SpendingChart extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'LAST 7 DAYS',
+                'SPENDING · LAST ${data.length} DAYS',
                 style: TextStyle(
                   fontSize: 11,
                   color: Colors.grey[500],
@@ -32,12 +55,12 @@ class SpendingChart extends StatelessWidget {
                   letterSpacing: 0.5,
                 ),
               ),
-              const Text(
-                'Today',
+              Text(
+                DateFormat('MMM d').format(DateTime.now()),
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[600],
                 ),
               ),
             ],
@@ -52,7 +75,7 @@ class SpendingChart extends StatelessWidget {
                 child: BarChart(
                   BarChartData(
                     alignment: BarChartAlignment.spaceAround,
-                    maxY: data.reduce((a, b) => a > b ? a : b) * 1.2,
+                    maxY: maxY,
                     barTouchData: BarTouchData(enabled: false),
                     titlesData: FlTitlesData(
                       show: true,
@@ -60,17 +83,20 @@ class SpendingChart extends StatelessWidget {
                         sideTitles: SideTitles(
                           showTitles: true,
                           getTitlesWidget: (value, meta) {
-                            const days = ['T', 'W', 'T', 'F', 'S', 'S', 'M'];
                             final idx = value.toInt();
-                            if (idx >= 0 && idx < days.length) {
+                            if (idx >= 0 && idx < dayLabels.length) {
                               return Padding(
                                 padding: const EdgeInsets.only(top: 4),
                                 child: Text(
-                                  days[idx],
+                                  dayLabels[idx],
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: Colors.grey[400],
-                                    fontWeight: FontWeight.w500,
+                                    color: idx == dayLabels.length - 1
+                                        ? AppColors.primary
+                                        : Colors.grey[400],
+                                    fontWeight: idx == dayLabels.length - 1
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
                                   ),
                                 ),
                               );
@@ -97,7 +123,7 @@ class SpendingChart extends StatelessWidget {
                         x: index,
                         barRods: [
                           BarChartRodData(
-                            toY: data[index],
+                            toY: data[index] == 0 ? 0.5 : data[index],
                             color: index == data.length - 1
                                 ? AppColors.primary
                                 : const Color(0xFFE0E0E0),
@@ -115,31 +141,55 @@ class SpendingChart extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const Text(
+                      'Today',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
                     Row(
                       children: [
                         Icon(
-                          Icons.trending_down,
-                          color: Colors.red[400],
+                          isUp ? Icons.trending_up : Icons.trending_down,
+                          color: isUp ? Colors.red[400] : Colors.green[400],
                           size: 20,
                         ),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            '₱${todayAmount.toStringAsFixed(2)}',
+                            '₱${NumberFormat('#,##0.00').format(todayAmount)}',
                             style: AppTextStyles.amountLarge,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    if (hasData && yesterday > 0) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '${isUp ? '+' : ''}₱${NumberFormat('#,##0').format(diff)} vs yesterday',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isUp ? Colors.red[300] : Colors.green[400],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 10),
+                    Row(
                       children: [
-                        _PeriodButton(label: 'Day', isActive: true),
-                        _PeriodButton(label: 'Week', isActive: false),
-                        _PeriodButton(label: 'Month', isActive: false),
+                        _StatChip(
+                          label: 'Week',
+                          value: '₱${NumberFormat('#,##0').format(weekTotal)}',
+                        ),
+                        const SizedBox(width: 8),
+                        _StatChip(
+                          label: 'Month',
+                          value: '₱${NumberFormat('#,##0').format(monthTotal)}',
+                        ),
                       ],
                     ),
                   ],
@@ -153,27 +203,39 @@ class SpendingChart extends StatelessWidget {
   }
 }
 
-class _PeriodButton extends StatelessWidget {
+class _StatChip extends StatelessWidget {
   final String label;
-  final bool isActive;
+  final String value;
 
-  const _PeriodButton({required this.label, required this.isActive});
+  const _StatChip({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: isActive ? AppColors.primary : Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(10),
       ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: isActive ? Colors.white : Colors.grey[600],
-        ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[500],
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
       ),
     );
   }

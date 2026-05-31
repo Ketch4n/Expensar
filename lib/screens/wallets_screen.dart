@@ -15,7 +15,6 @@ class WalletsScreen extends StatefulWidget {
 
 class _WalletsScreenState extends State<WalletsScreen> {
   List<Wallet> _wallets = [];
-  String? _selectedType;
 
   @override
   void initState() {
@@ -29,18 +28,13 @@ class _WalletsScreenState extends State<WalletsScreen> {
     setState(() => _wallets = wallets);
   }
 
-  List<Wallet> get _filteredWallets {
-    if (_selectedType == null) return _wallets;
-    return _wallets.where((w) => w.type == _selectedType).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     final totalBalance = _wallets.fold<double>(0, (sum, w) => sum + w.balance);
 
-    return Container(
-      color: AppColors.background,
-      child: SafeArea(
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
         bottom: false,
         child: Column(
           children: [
@@ -134,8 +128,6 @@ class _WalletsScreenState extends State<WalletsScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            _buildCategoryCards(),
-            const SizedBox(height: 16),
             Expanded(
               child: ListView.builder(
                 padding: const EdgeInsets.only(
@@ -143,95 +135,13 @@ class _WalletsScreenState extends State<WalletsScreen> {
                   right: 20,
                   bottom: 100,
                 ),
-                itemCount: _filteredWallets.length,
+                itemCount: _wallets.length,
                 itemBuilder: (context, index) =>
-                    _buildWalletCard(_filteredWallets[index]),
+                    _buildWalletCard(_wallets[index]),
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryCards() {
-    final categories = [
-      ('All', Icons.wallet, AppColors.textPrimary, null as String?),
-      ('Debit', Icons.credit_card, AppColors.secondary, 'Debit'),
-      ('Credit', Icons.credit_score, const Color(0xFFE91E63), 'Credit'),
-      ('Loans', Icons.handshake, AppColors.warning, 'Loans'),
-      ('Assets', Icons.account_balance, AppColors.primary, 'Assets'),
-      ('Stocks', Icons.show_chart, const Color(0xFF9C27B0), 'Stocks'),
-      ('Crypto', Icons.currency_bitcoin, const Color(0xFFF57C00), 'Crypto'),
-    ];
-
-    return SizedBox(
-      height: 90,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final (label, icon, color, type) = categories[index];
-          final isSelected = _selectedType == type;
-          final count = type == null
-              ? _wallets.length
-              : _wallets.where((w) => w.type == type).length;
-
-          return GestureDetector(
-            onTap: () => setState(() => _selectedType = type),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 90,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-              decoration: BoxDecoration(
-                color: isSelected ? color.withValues(alpha: 0.1) : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isSelected ? color : Colors.grey.shade200,
-                  width: isSelected ? 1.5 : 1,
-                ),
-                boxShadow: isSelected
-                    ? [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
-                    : const [
-                        BoxShadow(
-                          color: Color(0x0A000000),
-                          blurRadius: 4,
-                          offset: Offset(0, 2),
-                        ),
-                      ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, color: color, size: 24),
-                  const SizedBox(height: 6),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: isSelected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      color: isSelected ? color : Colors.grey[600],
-                    ),
-                  ),
-                  Text(
-                    '$count',
-                    style: TextStyle(fontSize: 10, color: Colors.grey[400]),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
       ),
     );
   }
