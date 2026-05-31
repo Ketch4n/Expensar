@@ -5,7 +5,6 @@ import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/add_wallet_dialog.dart';
-import '../widgets/add_expense_dialog.dart';
 
 class WalletsScreen extends StatefulWidget {
   const WalletsScreen({super.key});
@@ -39,34 +38,48 @@ class _WalletsScreenState extends State<WalletsScreen> {
   Widget build(BuildContext context) {
     final totalBalance = _wallets.fold<double>(0, (sum, w) => sum + w.balance);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          FloatingActionButton.small(
-            heroTag: 'addExpense',
-            onPressed: () => _showAddExpenseDialog(),
-            backgroundColor: AppColors.secondary,
-            child: const Icon(
-              Icons.receipt_long,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-          const SizedBox(height: 12),
-          FloatingActionButton(
-            heroTag: 'addWallet',
-            onPressed: () => _showAddWalletDialog(),
-            backgroundColor: AppColors.primary,
-            child: const Icon(Icons.add, color: Colors.white),
-          ),
-        ],
-      ),
-      body: SafeArea(
+    return Container(
+      color: AppColors.background,
+      child: SafeArea(
+        bottom: false,
         child: Column(
           children: [
-            const AppHeader(title: 'Wallets'),
+            Row(
+              children: [
+                const Expanded(child: AppHeader(title: 'Wallets')),
+                Padding(
+                  padding: const EdgeInsets.only(right: 20),
+                  child: GestureDetector(
+                    onTap: _showAddWalletDialog,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add, color: Colors.white, size: 18),
+                          SizedBox(width: 4),
+                          Text(
+                            'Add',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
@@ -125,7 +138,11 @@ class _WalletsScreenState extends State<WalletsScreen> {
             const SizedBox(height: 16),
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.only(
+                  left: 20,
+                  right: 20,
+                  bottom: 100,
+                ),
                 itemCount: _filteredWallets.length,
                 itemBuilder: (context, index) =>
                     _buildWalletCard(_filteredWallets[index]),
@@ -154,7 +171,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: categories.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final (label, icon, color, type) = categories[index];
           final isSelected = _selectedType == type;
@@ -322,15 +339,6 @@ class _WalletsScreenState extends State<WalletsScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const AddWalletDialog(),
-    ).then((_) => _loadData());
-  }
-
-  void _showAddExpenseDialog() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const AddExpenseDialog(),
     ).then((_) => _loadData());
   }
 

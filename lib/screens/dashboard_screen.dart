@@ -34,10 +34,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<Loan> _loans = [];
   String _userName = 'Friend';
 
+  int _currentIndex = 0;
+  late final PageController _pageController;
+
+  // Scroll-hide state
+  bool _isNavVisible = true;
+
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: 0);
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -56,80 +69,262 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  void _onPageChanged(int index) {
+    setState(() => _currentIndex = index);
+  }
+
+  void _onNavTapped(int index) {
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  bool _handleScrollNotification(ScrollNotification notification) {
+    if (notification is ScrollUpdateNotification) {
+      final delta = notification.scrollDelta ?? 0;
+
+      // Scroll down → hide nav
+      if (delta > 2 && _isNavVisible) {
+        setState(() => _isNavVisible = false);
+      }
+      // Scroll up → show nav
+      else if (delta < -2 && !_isNavVisible) {
+        setState(() => _isNavVisible = true);
+      }
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final totalBalance = _wallets.fold<double>(0, (sum, w) => sum + w.balance);
-    final dailySpending = DashboardHelper.calculateDailySpending(_wallets);
-    final todayTotal = dailySpending.last;
-
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Column(
+      body: NotificationListener<ScrollNotification>(
+        onNotification: _handleScrollNotification,
+        child: PageView(
+          controller: _pageController,
+          onPageChanged: _onPageChanged,
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    TimeOfDay.now().format(context),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.notifications_outlined),
-                        onPressed: () {},
-                        color: Colors.grey[600],
+            _buildHomePage(),
+            const StatsScreen(),
+            const WalletsScreen(),
+          ],
+        ),
+      ),
+      extendBody: true,
+      bottomNavigationBar: _buildFloatingNavAndFab(),
+    );
+  }
+
+  Widget _buildFloatingNavAndFab() {
+    return AnimatedSlide(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      offset: _isNavVisible ? Offset.zero : const Offset(0, 1.5),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(left: 40, right: 20, bottom: 16),
+          child: Row(
+            children: [
+              // Floating nav bar
+              Expanded(
+                child: Container(
+                  height: 64,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.settings_outlined),
-                        onPressed: () {},
-                        color: Colors.grey[600],
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                ],
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _navItem(Icons.home_rounded, 'Home', 0),
+                      _navItem(Icons.bar_chart_rounded, 'Stats', 1),
+                      _navItem(Icons.wallet_rounded, 'Wallet', 2),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // FAB add expense
+              GestureDetector(
+                onTap: _showAddExpense,
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.35),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.add_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _navItem(IconData icon, String label, int index) {
+    final isActive = _currentIndex == index;
+    return GestureDetector(
+      onTap: () => _onNavTapped(index),
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 64,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: isActive
+                    ? AppColors.primary.withValues(alpha: 0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: isActive ? AppColors.primary : Colors.grey[400],
+                size: 24,
               ),
             ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    GreetingCard(userName: _userName),
-                    const SizedBox(height: 20),
-                    _buildQuickActions(),
-                    const SizedBox(height: 20),
-                    _buildWalletSummary(totalBalance),
-                    const SizedBox(height: 20),
-                    SpendingChart(
-                      data: dailySpending.every((d) => d == 0)
-                          ? [150, 280, 180, 320, 220, 180, 469]
-                          : dailySpending,
-                      todayAmount: todayTotal,
-                    ),
-                    const SizedBox(height: 20),
-                    _buildUpcomingBills(),
-                    const SizedBox(height: 20),
-                    _buildPaydayCard(),
-                    const SizedBox(height: 20),
-                    _buildUpcomingTransactions(),
-                    const SizedBox(height: 20),
-                  ],
-                ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: isActive ? AppColors.primary : Colors.grey[400],
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNav(),
+    );
+  }
+
+  Widget _buildHomePage() {
+    final totalBalance = _wallets.fold<double>(0, (sum, w) => sum + w.balance);
+    final dailySpending = DashboardHelper.calculateDailySpending(_wallets);
+    final todayTotal = dailySpending.last;
+
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        children: [
+          // Header / App Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  TimeOfDay.now().format(context),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.notifications_outlined),
+                      onPressed: () {},
+                      color: Colors.grey[600],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.settings_outlined),
+                      onPressed: () {},
+                      color: Colors.grey[600],
+                    ),
+                    GestureDetector(
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ProfileScreen(),
+                          ),
+                        );
+                        _loadData();
+                      },
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.person_outline_rounded,
+                          color: AppColors.primary,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  GreetingCard(userName: _userName),
+                  const SizedBox(height: 20),
+                  _buildQuickActions(),
+                  const SizedBox(height: 20),
+                  _buildWalletSummary(totalBalance),
+                  const SizedBox(height: 20),
+                  SpendingChart(
+                    data: dailySpending.every((d) => d == 0)
+                        ? [150, 280, 180, 320, 220, 180, 469]
+                        : dailySpending,
+                    todayAmount: todayTotal,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildUpcomingBills(),
+                  const SizedBox(height: 20),
+                  _buildPaydayCard(),
+                  const SizedBox(height: 20),
+                  _buildUpcomingTransactions(),
+                  // Extra padding so content isn't hidden behind floating nav
+                  const SizedBox(height: 100),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -422,103 +617,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _credits,
     );
     return TransactionList(transactions: [...income, ...expenses]);
-  }
-
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x0D000000),
-            blurRadius: 10,
-            offset: Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _navItem(Icons.home, 'Home', true),
-              GestureDetector(
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const StatsScreen()),
-                  );
-                  _loadData();
-                },
-                child: _navItem(Icons.bar_chart, 'Stats', false),
-              ),
-              GestureDetector(
-                onTap: () => _showAddExpense(),
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.add, color: Colors.white, size: 28),
-                ),
-              ),
-              GestureDetector(
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const WalletsScreen()),
-                  );
-                  _loadData();
-                },
-                child: _navItem(Icons.wallet_outlined, 'Wallet', false),
-              ),
-              GestureDetector(
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                  );
-                  _loadData();
-                },
-                child: _navItem(Icons.person_outline, 'Profile', false),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem(IconData icon, String label, bool isActive) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          color: isActive ? AppColors.primary : Colors.grey[400],
-          size: 26,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: isActive ? AppColors.primary : Colors.grey[400],
-            fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-          ),
-        ),
-      ],
-    );
   }
 
   void _showAddExpense() {

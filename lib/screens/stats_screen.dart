@@ -49,9 +49,10 @@ class _StatsScreenState extends State<StatsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
+    return Container(
+      color: AppColors.background,
+      child: SafeArea(
+        bottom: false,
         child: Column(
           children: [
             const AppHeader(title: 'Statistics'),
@@ -67,7 +68,7 @@ class _StatsScreenState extends State<StatsScreen> {
                     _buildCategoryBreakdown(),
                     const SizedBox(height: 20),
                     _buildDebtSummary(),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
