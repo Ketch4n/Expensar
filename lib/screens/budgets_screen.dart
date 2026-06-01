@@ -71,76 +71,87 @@ class BudgetsScreen extends ConsumerWidget {
     final isSub = budget.category == 'subscription';
     final color = isSub ? AppColors.accent : AppColors.secondary;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(12),
+    return Builder(
+      builder: (context) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [AppDecorations.cardShadow(context)],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                isSub ? Icons.subscriptions : Icons.receipt_outlined,
+                color: color,
+                size: 22,
+              ),
             ),
-            child: Icon(
-              isSub ? Icons.subscriptions : Icons.receipt_outlined,
-              color: color,
-              size: 22,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(budget.name, style: AppTextStyles.cardTitle),
-                if (budget.description != null)
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    budget.description!,
-                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    budget.name,
+                    style: AppTextStyles.cardTitle.copyWith(
+                      color: context.textPrimary,
+                    ),
                   ),
+                  if (budget.description != null)
+                    Text(
+                      budget.description!,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: context.subtitleColor,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  Text(
+                    DateFormat('MMM d').format(budget.dueDate),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: context.subtitleColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
                 Text(
-                  DateFormat('MMM d').format(budget.dueDate),
-                  style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  budget.amount > 0
+                      ? '₱${NumberFormat('#,##0.00').format(budget.amount)}'
+                      : 'Free',
+                  style: AppTextStyles.amountMedium.copyWith(
+                    color: context.textPrimary,
+                  ),
                 ),
+                if (daysLeft >= 0)
+                  Text(
+                    '$daysLeft days',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: daysLeft <= 3
+                          ? AppColors.error
+                          : context.subtitleColor,
+                    ),
+                  ),
               ],
             ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                budget.amount > 0
-                    ? '₱${NumberFormat('#,##0.00').format(budget.amount)}'
-                    : 'Free',
-                style: AppTextStyles.amountMedium,
-              ),
-              if (daysLeft >= 0)
-                Text(
-                  '$daysLeft days',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: daysLeft <= 3 ? AppColors.error : Colors.grey[500],
-                  ),
-                ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

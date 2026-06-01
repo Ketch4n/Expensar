@@ -114,12 +114,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           icon: Icon(Icons.arrow_back_rounded, color: context.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Notifications',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: context.textPrimary,
           ),
         ),
         centerTitle: false,
@@ -151,18 +151,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'All caught up!',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: context.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'No upcoming payments in the next 7 days',
-            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+            style: TextStyle(fontSize: 14, color: context.subtitleColor),
           ),
         ],
       ),
@@ -173,7 +173,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return ListView.separated(
       padding: const EdgeInsets.all(20),
       itemCount: _notifications.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final item = _notifications[index];
         return _buildNotificationCard(item);
@@ -188,12 +188,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(16),
         border: daysLeft <= 1
             ? Border.all(color: AppColors.error.withValues(alpha: 0.3))
             : null,
-        boxShadow: [AppDecorations.cardShadow()],
+        boxShadow: [AppDecorations.cardShadow(context)],
       ),
       child: Row(
         children: [
@@ -213,10 +213,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               children: [
                 Text(
                   item.title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: context.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -225,7 +225,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
-                    color: Colors.grey[600],
+                    color: context.subtitleColor,
                   ),
                 ),
               ],
@@ -236,7 +236,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             decoration: BoxDecoration(
               color: daysLeft <= 1
                   ? AppColors.error.withValues(alpha: 0.1)
-                  : Colors.grey[100],
+                  : context.chipBackground,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -244,7 +244,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: daysLeft <= 1 ? AppColors.error : Colors.grey[600],
+                color: daysLeft <= 1 ? AppColors.error : context.subtitleColor,
               ),
             ),
           ),

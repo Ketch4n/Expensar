@@ -30,8 +30,9 @@ class DebtsScreen extends ConsumerWidget {
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.cardColor,
                   borderRadius: BorderRadius.circular(16),
+                  boxShadow: [AppDecorations.cardShadow(context)],
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -43,7 +44,7 @@ class DebtsScreen extends ConsumerWidget {
                           'REMAINING DEBT',
                           style: TextStyle(
                             fontSize: 11,
-                            color: Colors.grey[500],
+                            color: context.subtitleColor,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -65,7 +66,7 @@ class DebtsScreen extends ConsumerWidget {
                           '${pending.length} pending',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.grey[600],
+                            color: context.subtitleColor,
                           ),
                         ),
                         Text(
@@ -112,15 +113,9 @@ class DebtsScreen extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardColor,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
+          boxShadow: [AppDecorations.cardShadow(context)],
         ),
         child: Row(
           children: [
@@ -150,7 +145,7 @@ class DebtsScreen extends ConsumerWidget {
                         : 'Remaining: ₱${NumberFormat('#,##0').format(debt.remainingBalance)}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: isPaid ? AppColors.primary : Colors.grey[500],
+                      color: isPaid ? AppColors.primary : context.subtitleColor,
                     ),
                   ),
                 ],
@@ -171,11 +166,11 @@ class DebtsScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.65,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      builder: (sheetContext) => Container(
+        height: MediaQuery.of(sheetContext).size.height * 0.65,
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           children: [
@@ -184,7 +179,7 @@ class DebtsScreen extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: context.isDark ? Colors.grey[600] : Colors.grey[300],
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -192,7 +187,12 @@ class DebtsScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
-                  Text(debt.name, style: AppTextStyles.heading),
+                  Text(
+                    debt.name,
+                    style: AppTextStyles.heading.copyWith(
+                      color: context.textPrimary,
+                    ),
+                  ),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -201,8 +201,8 @@ class DebtsScreen extends ConsumerWidget {
                     ),
                     decoration: BoxDecoration(
                       color: debt.status == 'Paid'
-                          ? const Color(0xFFE8F5E9)
-                          : const Color(0xFFFFF3E0),
+                          ? AppColors.primary.withValues(alpha: 0.1)
+                          : AppColors.warning.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -219,19 +219,19 @@ class DebtsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const Divider(height: 1),
+            Divider(height: 1, color: context.dividerColor),
             Expanded(
               child: debt.logs.isEmpty
                   ? Center(
                       child: Text(
                         'No log entries',
-                        style: TextStyle(color: Colors.grey[500]),
+                        style: TextStyle(color: context.subtitleColor),
                       ),
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(20),
                       itemCount: debt.logs.length,
-                      itemBuilder: (context, index) {
+                      itemBuilder: (sheetContext, index) {
                         final log = debt.logs[index];
                         final isBorrowed = log.amountBorrowed != null;
                         return Padding(
@@ -258,10 +258,10 @@ class DebtsScreen extends ConsumerWidget {
                                           (isBorrowed
                                               ? 'Borrowed'
                                               : 'Payment from ${log.paymentFrom ?? ""}'),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w500,
-                                        color: AppColors.textPrimary,
+                                        color: context.textPrimary,
                                       ),
                                     ),
                                     Text(
@@ -270,7 +270,7 @@ class DebtsScreen extends ConsumerWidget {
                                       ).format(log.date),
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: Colors.grey[500],
+                                        color: context.subtitleColor,
                                       ),
                                     ),
                                   ],

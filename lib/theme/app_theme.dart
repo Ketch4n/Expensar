@@ -3,9 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 /// Centralized app colors — static brand colors that don't change with theme.
 abstract final class AppColors {
-  static const Color primary = Color(0xFF2E7D32);
-  static const Color primaryLight = Color(0xFF43A047);
-  static const Color primaryLighter = Color(0xFF66BB6A);
+  static const Color primary = Color(0xFF43A047);
+  static const Color primaryLight = Color(0xFF66BB6A);
+  static const Color primaryLighter = Color(0xFF81C784);
   static const Color secondary = Color(0xFF2196F3);
   static const Color accent = Color(0xFF7C4DFF);
   static const Color warning = Color(0xFFFF9800);

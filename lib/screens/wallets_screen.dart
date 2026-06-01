@@ -36,7 +36,7 @@ class WalletsScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: context.isDark
                             ? AppColors.primary.withValues(alpha: 0.1)
-                            : AppColors.primary,
+                            : AppColors.primaryLight,
                         borderRadius: BorderRadius.circular(12),
                         border: context.isDark
                             ? Border.all(
@@ -181,15 +181,9 @@ class WalletsScreen extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardColor,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
+          boxShadow: [AppDecorations.cardShadow(context)],
         ),
         child: Row(
           children: [
@@ -207,13 +201,21 @@ class WalletsScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(wallet.name, style: AppTextStyles.cardTitle),
+                  Text(
+                    wallet.name,
+                    style: AppTextStyles.cardTitle.copyWith(
+                      color: context.textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 2),
                   Row(
                     children: [
                       Text(
                         wallet.type,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.subtitleColor,
+                        ),
                       ),
                       if (wallet.status != null) ...[
                         const SizedBox(width: 8),
@@ -223,7 +225,7 @@ class WalletsScreen extends ConsumerWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFF3E0),
+                            color: AppColors.warning.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
@@ -246,12 +248,17 @@ class WalletsScreen extends ConsumerWidget {
               children: [
                 Text(
                   '₱${NumberFormat('#,##0.00').format(wallet.balance)}',
-                  style: AppTextStyles.amountMedium,
+                  style: AppTextStyles.amountMedium.copyWith(
+                    color: context.textPrimary,
+                  ),
                 ),
                 if (wallet.expectedPayoutDate != null)
                   Text(
                     DateFormat('MMM d').format(wallet.expectedPayoutDate!),
-                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: context.subtitleColor,
+                    ),
                   ),
               ],
             ),
@@ -275,11 +282,11 @@ class WalletsScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      builder: (sheetContext) => Container(
+        height: MediaQuery.of(sheetContext).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           children: [
@@ -288,7 +295,7 @@ class WalletsScreen extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: context.isDark ? Colors.grey[600] : Colors.grey[300],
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -296,7 +303,12 @@ class WalletsScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(20),
               child: Row(
                 children: [
-                  Text(wallet.name, style: AppTextStyles.heading),
+                  Text(
+                    wallet.name,
+                    style: AppTextStyles.heading.copyWith(
+                      color: context.textPrimary,
+                    ),
+                  ),
                   const Spacer(),
                   Text(
                     '₱${NumberFormat('#,##0.00').format(wallet.balance)}',
@@ -309,19 +321,19 @@ class WalletsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const Divider(height: 1),
+            Divider(height: 1, color: context.dividerColor),
             Expanded(
               child: wallet.logs.isEmpty
                   ? Center(
                       child: Text(
                         'No transactions yet',
-                        style: TextStyle(color: Colors.grey[500]),
+                        style: TextStyle(color: context.subtitleColor),
                       ),
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.all(20),
                       itemCount: wallet.logs.length,
-                      itemBuilder: (context, index) {
+                      itemBuilder: (sheetContext, index) {
                         final log = wallet.logs[index];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 16),
@@ -333,10 +345,10 @@ class WalletsScreen extends ConsumerWidget {
                                   children: [
                                     Text(
                                       log.description,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
-                                        color: AppColors.textPrimary,
+                                        color: context.textPrimary,
                                       ),
                                     ),
                                     const SizedBox(height: 2),
@@ -346,7 +358,7 @@ class WalletsScreen extends ConsumerWidget {
                                       ).format(log.date),
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Colors.grey[500],
+                                        color: context.subtitleColor,
                                       ),
                                     ),
                                   ],
@@ -357,10 +369,10 @@ class WalletsScreen extends ConsumerWidget {
                                 children: [
                                   Text(
                                     '₱${NumberFormat('#,##0.00').format(log.amount)}',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary,
+                                      color: context.textPrimary,
                                     ),
                                   ),
                                   if (log.serviceCharge != null)

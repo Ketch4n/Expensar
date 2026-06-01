@@ -19,9 +19,14 @@ class PaydayCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8F5E9),
+        color: context.isDark
+            ? AppColors.primary.withValues(alpha: 0.1)
+            : const Color(0xFFE8F5E9),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [AppDecorations.cardShadow()],
+        boxShadow: [AppDecorations.cardShadow(context)],
+        border: context.isDark
+            ? Border.all(color: AppColors.primary.withValues(alpha: 0.3))
+            : null,
       ),
       child: Row(
         children: [
@@ -29,7 +34,7 @@ class PaydayCard extends StatelessWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.cardColor,
               borderRadius: BorderRadius.circular(15),
             ),
             child: const Center(
@@ -45,13 +50,18 @@ class PaydayCard extends StatelessWidget {
                   'DAYS UNTIL PAYDAY',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey[600],
+                    color: context.subtitleColor,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text('$daysUntilPayday days', style: AppTextStyles.amountLarge),
+                Text(
+                  '$daysUntilPayday days',
+                  style: AppTextStyles.amountLarge.copyWith(
+                    color: context.textPrimary,
+                  ),
+                ),
               ],
             ),
           ),
@@ -60,16 +70,16 @@ class PaydayCard extends StatelessWidget {
             children: [
               Text(
                 '₱${NumberFormat('#,##0.00').format(amount)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: context.textPrimary,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 DateFormat('MMM d').format(paydayDate),
-                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                style: TextStyle(fontSize: 12, color: context.subtitleColor),
               ),
             ],
           ),

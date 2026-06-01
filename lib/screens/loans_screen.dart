@@ -26,7 +26,7 @@ class LoansScreen extends ConsumerWidget {
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
-                decoration: AppDecorations.card(),
+                decoration: AppDecorations.card(context),
                 child: Row(
                   children: [
                     Expanded(
@@ -37,7 +37,7 @@ class LoansScreen extends ConsumerWidget {
                             'TOTAL OUTSTANDING',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.grey[500],
+                              color: context.subtitleColor,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,
                             ),
@@ -62,7 +62,7 @@ class LoansScreen extends ConsumerWidget {
                             'TOTAL PAID',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.grey[500],
+                              color: context.subtitleColor,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,
                             ),
@@ -117,15 +117,9 @@ class LoansScreen extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardColor,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
+          boxShadow: [AppDecorations.cardShadow(context)],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,17 +144,25 @@ class LoansScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(loan.name, style: AppTextStyles.cardTitle),
+                      Text(
+                        loan.name,
+                        style: AppTextStyles.cardTitle.copyWith(
+                          color: context.textPrimary,
+                        ),
+                      ),
                       Text(
                         '${loan.loanTerm} • ${loan.interestRate}% interest',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.subtitleColor,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 Text(
                   '₱${NumberFormat('#,##0.00').format(loan.balance)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                     color: AppColors.error,
@@ -173,7 +175,9 @@ class LoansScreen extends ConsumerWidget {
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: progress.clamp(0.0, 1.0),
-                backgroundColor: Colors.grey[200],
+                backgroundColor: context.isDark
+                    ? Colors.grey[700]
+                    : Colors.grey[200],
                 valueColor: const AlwaysStoppedAnimation<Color>(
                   AppColors.primary,
                 ),
@@ -186,7 +190,7 @@ class LoansScreen extends ConsumerWidget {
               children: [
                 Text(
                   'Paid: ₱${NumberFormat('#,##0.00').format(loan.paidAmount)}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+                  style: TextStyle(fontSize: 11, color: context.subtitleColor),
                 ),
                 if (nextPayment.isNotEmpty)
                   Text(
@@ -210,11 +214,11 @@ class LoansScreen extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.75,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      builder: (sheetContext) => Container(
+        height: MediaQuery.of(sheetContext).size.height * 0.75,
+        decoration: BoxDecoration(
+          color: context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         child: Column(
           children: [
@@ -223,7 +227,7 @@ class LoansScreen extends ConsumerWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey[300],
+                color: context.isDark ? Colors.grey[600] : Colors.grey[300],
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -232,24 +236,30 @@ class LoansScreen extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(loan.name, style: AppTextStyles.heading),
+                  Text(
+                    loan.name,
+                    style: AppTextStyles.heading.copyWith(
+                      color: context.textPrimary,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       _infoChip(
+                        context,
                         'Principal',
                         '₱${NumberFormat('#,##0').format(loan.principalAmount)}',
                       ),
                       const SizedBox(width: 8),
-                      _infoChip('Rate', '${loan.interestRate}%'),
+                      _infoChip(context, 'Rate', '${loan.interestRate}%'),
                       const SizedBox(width: 8),
-                      _infoChip('Term', loan.loanTerm),
+                      _infoChip(context, 'Term', loan.loanTerm),
                     ],
                   ),
                 ],
               ),
             ),
-            const Divider(height: 1),
+            Divider(height: 1, color: context.dividerColor),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
@@ -260,12 +270,12 @@ class LoansScreen extends ConsumerWidget {
                     color: AppColors.primary,
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'Payment Schedule',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: context.textPrimary,
                     ),
                   ),
                 ],
@@ -275,7 +285,7 @@ class LoansScreen extends ConsumerWidget {
               child: ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: loan.transactions.length,
-                itemBuilder: (context, index) {
+                itemBuilder: (sheetContext, index) {
                   final tx = loan.transactions[index];
                   final isPaid = tx.status == 'Paid';
                   return Padding(
@@ -286,7 +296,9 @@ class LoansScreen extends ConsumerWidget {
                           isPaid
                               ? Icons.check_circle
                               : Icons.radio_button_unchecked,
-                          color: isPaid ? AppColors.primary : Colors.grey[400],
+                          color: isPaid
+                              ? AppColors.primary
+                              : context.subtitleColor,
                           size: 20,
                         ),
                         const SizedBox(width: 12),
@@ -296,17 +308,17 @@ class LoansScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 tx.month,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
-                                  color: AppColors.textPrimary,
+                                  color: context.textPrimary,
                                 ),
                               ),
                               Text(
                                 DateFormat('MMM d, yyyy').format(tx.dueDate),
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey[500],
+                                  color: context.subtitleColor,
                                 ),
                               ),
                             ],
@@ -319,7 +331,7 @@ class LoansScreen extends ConsumerWidget {
                             fontWeight: FontWeight.w600,
                             color: isPaid
                                 ? AppColors.primary
-                                : AppColors.textPrimary,
+                                : context.textPrimary,
                           ),
                         ),
                       ],
@@ -334,23 +346,26 @@ class LoansScreen extends ConsumerWidget {
     );
   }
 
-  Widget _infoChip(String label, String value) {
+  Widget _infoChip(BuildContext context, String label, String value) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: context.chipBackground,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
         children: [
-          Text(label, style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+          Text(
+            label,
+            style: TextStyle(fontSize: 10, color: context.subtitleColor),
+          ),
           const SizedBox(height: 2),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: context.textPrimary,
             ),
           ),
         ],

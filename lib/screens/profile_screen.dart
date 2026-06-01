@@ -80,19 +80,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
-            backgroundColor: AppColors.primary,
+            backgroundColor: context.isDark
+                ? AppColors.darkCardBackground
+                : AppColors.primary,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              icon: Icon(
+                Icons.arrow_back_rounded,
+                color: context.isDark ? AppColors.primaryLighter : Colors.white,
+              ),
               onPressed: () => Navigator.pop(context),
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppColors.primary, AppColors.primaryLight],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                decoration: BoxDecoration(
+                  gradient: context.isDark
+                      ? null
+                      : const LinearGradient(
+                          colors: [AppColors.primary, AppColors.primaryLight],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                  color: context.isDark
+                      ? AppColors.primary.withValues(alpha: 0.08)
+                      : null,
                 ),
                 child: SafeArea(
                   child: Column(
@@ -103,10 +113,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         width: 72,
                         height: 72,
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.2),
+                          color: context.isDark
+                              ? AppColors.primary.withValues(alpha: 0.15)
+                              : Colors.white.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.4),
+                            color: context.isDark
+                                ? AppColors.primary.withValues(alpha: 0.4)
+                                : Colors.white.withValues(alpha: 0.4),
                             width: 2,
                           ),
                         ),
@@ -115,10 +129,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                             userName.isNotEmpty
                                 ? userName[0].toUpperCase()
                                 : 'U',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: context.isDark
+                                  ? AppColors.primaryLighter
+                                  : Colors.white,
                             ),
                           ),
                         ),
@@ -126,10 +142,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       const SizedBox(height: 12),
                       Text(
                         userName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: context.isDark
+                              ? AppColors.darkTextPrimary
+                              : Colors.white,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -137,7 +155,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         'Member since ${DateFormat('MMM yyyy').format(DateTime.now())}',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Colors.white.withValues(alpha: 0.7),
+                          color: context.isDark
+                              ? AppColors.primary.withValues(alpha: 0.6)
+                              : Colors.white.withValues(alpha: 0.7),
                         ),
                       ),
                     ],

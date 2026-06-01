@@ -19,9 +19,14 @@ class AppHeader extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.arrow_back_ios, size: 20),
               onPressed: () => Navigator.pop(context),
-              color: AppColors.textPrimary,
+              color: context.textPrimary,
             ),
-          Expanded(child: Text(title, style: AppTextStyles.heading)),
+          Expanded(
+            child: Text(
+              title,
+              style: AppTextStyles.heading.copyWith(color: context.textPrimary),
+            ),
+          ),
         ],
       ),
     );

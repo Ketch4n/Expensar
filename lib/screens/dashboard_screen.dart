@@ -163,7 +163,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   decoration: BoxDecoration(
                     color: context.isDark
                         ? AppColors.primary.withValues(alpha: 0.15)
-                        : AppColors.primary,
+                        : AppColors.primaryLight,
                     shape: BoxShape.circle,
                     border: context.isDark
                         ? Border.all(
@@ -175,7 +175,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ? null
                         : [
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.35),
+                              color: AppColors.primaryLight.withValues(
+                                alpha: 0.35,
+                              ),
                               blurRadius: 16,
                               offset: const Offset(0, 6),
                             ),
@@ -263,7 +265,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   _getGreeting(settings.userName),
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.bold,
                     color: context.textPrimary,
                   ),
                 ),
