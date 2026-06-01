@@ -1,42 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/credit.dart';
-import '../services/database_service.dart';
+import '../providers/data_providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 
-class CreditsScreen extends StatefulWidget {
+class CreditsScreen extends ConsumerWidget {
   const CreditsScreen({super.key});
 
   @override
-  State<CreditsScreen> createState() => _CreditsScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final credits = ref.watch(creditsProvider);
 
-class _CreditsScreenState extends State<CreditsScreen> {
-  List<Credit> _credits = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    final credits = await DatabaseService.getCredits();
-    if (!mounted) return;
-    setState(() => _credits = credits);
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.scaffoldBackground,
       body: SafeArea(
         child: Column(
           children: [
             const AppHeader(title: 'Credits'),
             Expanded(
-              child: _credits.isEmpty
+              child: credits.isEmpty
                   ? Center(
                       child: Text(
                         'No credits yet',
@@ -45,9 +29,9 @@ class _CreditsScreenState extends State<CreditsScreen> {
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: _credits.length,
+                      itemCount: credits.length,
                       itemBuilder: (context, index) =>
-                          _buildCreditCard(_credits[index]),
+                          _buildCreditCard(credits[index]),
                     ),
             ),
           ],

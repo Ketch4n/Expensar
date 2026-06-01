@@ -1,39 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/budget.dart';
-import '../services/database_service.dart';
+import '../providers/data_providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 
-class BudgetsScreen extends StatefulWidget {
+class BudgetsScreen extends ConsumerWidget {
   const BudgetsScreen({super.key});
 
   @override
-  State<BudgetsScreen> createState() => _BudgetsScreenState();
-}
-
-class _BudgetsScreenState extends State<BudgetsScreen> {
-  List<Budget> _budgets = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    final budgets = await DatabaseService.getBudgets();
-    if (!mounted) return;
-    setState(() => _budgets = budgets);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bills = _budgets.where((b) => b.category == 'budget').toList();
-    final subs = _budgets.where((b) => b.category == 'subscription').toList();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final budgets = ref.watch(budgetsProvider);
+    final bills = budgets.where((b) => b.category == 'budget').toList();
+    final subs = budgets.where((b) => b.category == 'subscription').toList();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.scaffoldBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -63,7 +46,7 @@ class _BudgetsScreenState extends State<BudgetsScreen> {
                       const SizedBox(height: 12),
                       ...subs.map(_buildBudgetItem),
                     ],
-                    if (_budgets.isEmpty)
+                    if (budgets.isEmpty)
                       Center(
                         child: Padding(
                           padding: const EdgeInsets.all(40),

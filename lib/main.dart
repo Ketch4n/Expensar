@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/theme_provider.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/onboarding_screen.dart';
 import 'services/database_service.dart';
@@ -10,20 +12,28 @@ void main() async {
   final onboardingComplete = await DatabaseService.getSetting(
     'onboardingComplete',
   );
-  runApp(ExpensarApp(showOnboarding: onboardingComplete != 'true'));
+  runApp(
+    ProviderScope(
+      child: ExpensarApp(showOnboarding: onboardingComplete != 'true'),
+    ),
+  );
 }
 
-class ExpensarApp extends StatelessWidget {
+class ExpensarApp extends ConsumerWidget {
   final bool showOnboarding;
 
   const ExpensarApp({super.key, required this.showOnboarding});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeProvider);
+
     return MaterialApp(
       title: 'Expensar',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
+      darkTheme: buildDarkAppTheme(),
+      themeMode: themeMode,
       home: showOnboarding ? const OnboardingScreen() : const DashboardScreen(),
     );
   }

@@ -21,7 +21,7 @@ class PaydayCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFE8F5E9),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [AppDecorations.cardShadow],
+        boxShadow: [AppDecorations.cardShadow()],
       ),
       child: Row(
         children: [

@@ -110,9 +110,9 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -127,18 +127,18 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: context.isDark ? Colors.grey[600] : Colors.grey[300],
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Add Expense',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: context.textPrimary,
                 ),
               ),
               const SizedBox(height: 20),
@@ -151,7 +151,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: AppColors.background,
+                  fillColor: context.scaffoldBackground,
                 ),
                 items: _wallets.map((wallet) {
                   return DropdownMenuItem(
@@ -175,7 +175,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: AppColors.background,
+                  fillColor: context.scaffoldBackground,
                 ),
                 validator: (value) => value == null || value.trim().isEmpty
                     ? 'Please enter a description'
@@ -194,7 +194,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: AppColors.background,
+                  fillColor: context.scaffoldBackground,
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -220,7 +220,7 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: AppColors.background,
+                  fillColor: context.scaffoldBackground,
                 ),
                 validator: (value) {
                   if (value != null && value.isNotEmpty) {
@@ -244,21 +244,24 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                           vertical: 14,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.background,
+                          color: context.scaffoldBackground,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[300]!),
+                          border: Border.all(color: context.dividerColor),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               Icons.calendar_today,
                               size: 18,
-                              color: Colors.grey[600],
+                              color: context.subtitleColor,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               DateFormat('MMM d, yyyy').format(_selectedDate),
-                              style: const TextStyle(fontSize: 14),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: context.textPrimary,
+                              ),
                             ),
                           ],
                         ),
@@ -275,21 +278,24 @@ class _AddExpenseDialogState extends State<AddExpenseDialog> {
                           vertical: 14,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.background,
+                          color: context.scaffoldBackground,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[300]!),
+                          border: Border.all(color: context.dividerColor),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               Icons.access_time,
                               size: 18,
-                              color: Colors.grey[600],
+                              color: context.subtitleColor,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               _selectedTime.format(context),
-                              style: const TextStyle(fontSize: 14),
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: context.textPrimary,
+                              ),
                             ),
                           ],
                         ),

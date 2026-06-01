@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
-import '../services/database_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/theme_provider.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_theme.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
-
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  String _currency = '₱';
-  String _themeMode = 'system';
 
   static const _currencies = [
     _CurrencyOption(symbol: '₱', name: 'Philippine Peso'),
@@ -30,35 +24,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
       icon: Icons.light_mode_rounded,
     ),
     _ThemeOption(value: 'dark', label: 'Dark', icon: Icons.dark_mode_rounded),
-    _ThemeOption(
-      value: 'system',
-      label: 'System',
-      icon: Icons.settings_brightness_rounded,
-    ),
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _loadSettings();
-  }
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final themeMode = ref.watch(themeProvider);
+    final currentThemeMode = switch (themeMode) {
+      ThemeMode.light => 'light',
+      ThemeMode.dark => 'dark',
+      _ => 'light',
+    };
 
-  Future<void> _loadSettings() async {
-    final currency = await DatabaseService.getSetting('currency');
-    final theme = await DatabaseService.getSetting('themeMode');
-    if (!mounted) return;
-    setState(() {
-      _currency = currency ?? '₱';
-      _themeMode = theme ?? 'system';
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.scaffoldBackground,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: IconButton(
@@ -82,9 +63,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            _buildCurrencySection(),
+            _buildCurrencySection(ref, settings.currency),
             const SizedBox(height: 20),
-            _buildThemeSection(),
+            _buildThemeSection(ref, currentThemeMode),
             const SizedBox(height: 40),
           ],
         ),
@@ -92,9 +73,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildCurrencySection() {
+  Widget _buildCurrencySection(WidgetRef ref, String currency) {
     final selected = _currencies.firstWhere(
-      (c) => c.symbol == _currency,
+      (c) => c.symbol == currency,
       orElse: () => _currencies.first,
     );
 
@@ -142,12 +123,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           const SizedBox(height: 8),
           ...List.generate(_currencies.length, (index) {
-            final currency = _currencies[index];
-            final isSelected = _currency == currency.symbol;
+            final c = _currencies[index];
+            final isSelected = currency == c.symbol;
             return InkWell(
-              onTap: () async {
-                setState(() => _currency = currency.symbol);
-                await DatabaseService.setSetting('currency', currency.symbol);
+              onTap: () {
+                ref.read(settingsProvider.notifier).setCurrency(c.symbol);
               },
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -172,7 +152,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       child: Center(
                         child: Text(
-                          currency.symbol,
+                          c.symbol,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
@@ -186,7 +166,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const SizedBox(width: 14),
                     Expanded(
                       child: Text(
-                        currency.name,
+                        c.name,
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: isSelected
@@ -215,7 +195,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildThemeSection() {
+  Widget _buildThemeSection(WidgetRef ref, String currentThemeMode) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: AppDecorations.card(),
@@ -251,12 +231,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 20),
           Row(
             children: _themes.map((theme) {
-              final isSelected = _themeMode == theme.value;
+              final isSelected = currentThemeMode == theme.value;
               return Expanded(
                 child: GestureDetector(
-                  onTap: () async {
-                    setState(() => _themeMode = theme.value);
-                    await DatabaseService.setSetting('themeMode', theme.value);
+                  onTap: () {
+                    ref.read(themeProvider.notifier).setThemeMode(theme.value);
                   },
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),

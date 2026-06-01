@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/settings_provider.dart';
 import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 import 'dashboard_screen.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final PageController _pageController = PageController();
   final TextEditingController _nameController = TextEditingController();
   int _currentPage = 0;
@@ -35,7 +37,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
 
-    await DatabaseService.setSetting('userName', name);
+    await ref.read(settingsProvider.notifier).setUserName(name);
     await DatabaseService.setSetting('onboardingComplete', 'true');
 
     if (!mounted) return;
@@ -47,7 +49,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.scaffoldBackground,
       body: SafeArea(
         child: Column(
           children: [

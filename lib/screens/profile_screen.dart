@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
@@ -7,31 +8,50 @@ import '../models/budget.dart';
 import '../models/credit.dart';
 import '../models/debt.dart';
 import '../models/loan.dart';
+import '../providers/theme_provider.dart';
+import '../providers/settings_provider.dart';
+import '../providers/data_providers.dart';
 import '../services/database_service.dart';
 import '../services/backup_service.dart';
 import '../theme/app_theme.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  List<Wallet> _wallets = [];
-  List<Budget> _budgets = [];
-  List<Credit> _credits = [];
-  List<Debt> _debts = [];
-  List<Loan> _loans = [];
-  String _userName = 'User';
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _isEditingName = false;
   final _nameController = TextEditingController();
+
+  static const _currencies = [
+    _CurrencyOption(symbol: '₱', name: 'PHP'),
+    _CurrencyOption(symbol: '\$', name: 'USD'),
+    _CurrencyOption(symbol: '€', name: 'EUR'),
+    _CurrencyOption(symbol: '£', name: 'GBP'),
+    _CurrencyOption(symbol: '¥', name: 'JPY'),
+    _CurrencyOption(symbol: '₩', name: 'KRW'),
+    _CurrencyOption(symbol: '₹', name: 'INR'),
+  ];
+
+  static const _themes = [
+    _ThemeOption(
+      value: 'light',
+      label: 'Light',
+      icon: Icons.light_mode_rounded,
+    ),
+    _ThemeOption(value: 'dark', label: 'Dark', icon: Icons.dark_mode_rounded),
+  ];
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    // Sync the text controller with the current settings
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _nameController.text = ref.read(settingsProvider).userName;
+    });
   }
 
   @override
@@ -40,32 +60,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    final wallets = await DatabaseService.getWallets();
-    final budgets = await DatabaseService.getBudgets();
-    final credits = await DatabaseService.getCredits();
-    final debts = await DatabaseService.getDebts();
-    final loans = await DatabaseService.getLoans();
-    final name = await DatabaseService.getSetting('userName');
-    if (!mounted) return;
-    setState(() {
-      _wallets = wallets;
-      _budgets = budgets;
-      _credits = credits;
-      _debts = debts;
-      _loans = loans;
-      _userName = name ?? 'User';
-      _nameController.text = _userName;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
+    final wallets = ref.watch(walletsProvider);
+    final budgets = ref.watch(budgetsProvider);
+    final credits = ref.watch(creditsProvider);
+    final debts = ref.watch(debtsProvider);
+    final loans = ref.watch(loansProvider);
+    final themeMode = ref.watch(themeProvider);
+
+    final userName = settings.userName;
+    final currency = settings.currency;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.scaffoldBackground,
       body: CustomScrollView(
         slivers: [
-          // Collapsing header with profile info
           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
@@ -101,8 +112,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            _userName.isNotEmpty
-                                ? _userName[0].toUpperCase()
+                            userName.isNotEmpty
+                                ? userName[0].toUpperCase()
                                 : 'U',
                             style: const TextStyle(
                               fontSize: 28,
@@ -114,7 +125,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        _userName,
+                        userName,
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -136,15 +147,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
 
-          // Content
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
-                  _buildNameSection(),
+                  _buildNameSection(userName),
                   const SizedBox(height: 20),
-                  _buildQuickStats(),
+                  _buildQuickStats(wallets, budgets, credits, debts, loans),
+                  const SizedBox(height: 20),
+                  _buildSettingsSection(currency, themeMode),
                   const SizedBox(height: 24),
                   _buildMenuSection('Data Management', [
                     _MenuItem(
@@ -184,10 +196,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildNameSection() {
+  Widget _buildNameSection(String userName) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(),
+      decoration: AppDecorations.card(context),
       child: Row(
         children: [
           Container(
@@ -209,10 +221,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ? TextField(
                     controller: _nameController,
                     autofocus: true,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
+                      color: context.textPrimary,
                     ),
                     decoration: InputDecoration(
                       hintText: 'Enter your name',
@@ -227,17 +239,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _userName,
-                        style: const TextStyle(
+                        userName,
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
+                          color: context.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         'Display Name',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: context.subtitleColor,
+                        ),
                       ),
                     ],
                   ),
@@ -249,7 +264,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
               decoration: BoxDecoration(
-                color: _isEditingName ? AppColors.primary : Colors.grey[100],
+                color: _isEditingName
+                    ? AppColors.primary
+                    : context.chipBackground,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -257,7 +274,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: _isEditingName ? Colors.white : Colors.grey[600],
+                  color: _isEditingName ? Colors.white : context.subtitleColor,
                 ),
               ),
             ),
@@ -270,29 +287,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _saveName() async {
     final name = _nameController.text.trim();
     if (name.isNotEmpty) {
-      await DatabaseService.setSetting('userName', name);
-      setState(() {
-        _userName = name;
-        _isEditingName = false;
-      });
-    } else {
-      setState(() => _isEditingName = false);
+      await ref.read(settingsProvider.notifier).setUserName(name);
     }
+    setState(() => _isEditingName = false);
   }
 
-  Widget _buildQuickStats() {
-    final totalBalance = _wallets.fold<double>(0, (sum, w) => sum + w.balance);
+  Widget _buildQuickStats(
+    List<Wallet> wallets,
+    List<Budget> budgets,
+    List<Credit> credits,
+    List<Debt> debts,
+    List<Loan> loans,
+  ) {
+    final totalBalance = wallets.fold<double>(0, (sum, w) => sum + w.balance);
     final totalDebt =
-        _debts.fold<double>(0, (sum, d) => sum + d.remainingBalance) +
-        _loans.fold<double>(0, (sum, l) => sum + l.balance) +
-        _credits.fold<double>(0, (sum, c) => sum + c.outstandingBalance);
-    final upcomingBills = _budgets
+        debts.fold<double>(0, (sum, d) => sum + d.remainingBalance) +
+        loans.fold<double>(0, (sum, l) => sum + l.balance) +
+        credits.fold<double>(0, (sum, c) => sum + c.outstandingBalance);
+    final upcomingBills = budgets
         .where((b) => b.status == 'Upcoming')
         .fold<double>(0, (sum, b) => sum + b.amount);
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(),
+      decoration: AppDecorations.card(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -304,12 +322,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 size: 20,
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Financial Overview',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: context.textPrimary,
                 ),
               ),
             ],
@@ -348,7 +366,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Expanded(
                 child: _statTile(
                   'Accounts',
-                  '${_wallets.length} wallets',
+                  '${wallets.length} wallets',
                   AppColors.secondary,
                 ),
               ),
@@ -374,7 +392,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[500],
+              color: context.subtitleColor,
             ),
           ),
           const SizedBox(height: 4),
@@ -392,9 +410,316 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget _buildSettingsSection(String currency, ThemeMode themeMode) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: AppDecorations.card(context),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.tune_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Preferences',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: context.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          _buildCurrencyRow(currency),
+          const SizedBox(height: 16),
+          _buildThemeRow(themeMode),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCurrencyRow(String currency) {
+    final selected = _currencies.firstWhere(
+      (c) => c.symbol == currency,
+      orElse: () => _currencies.first,
+    );
+
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.warning.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(
+            Icons.attach_money_rounded,
+            color: AppColors.warning,
+            size: 18,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Currency',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: context.textPrimary,
+                ),
+              ),
+              Text(
+                '${selected.symbol} ${selected.name}',
+                style: TextStyle(fontSize: 11, color: context.subtitleColor),
+              ),
+            ],
+          ),
+        ),
+        GestureDetector(
+          onTap: _showCurrencyPicker,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: context.chipBackground,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  selected.symbol,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: context.textPrimary,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.unfold_more_rounded,
+                  size: 16,
+                  color: context.subtitleColor,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showCurrencyPicker() {
+    final currency = ref.read(settingsProvider).currency;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: this.context.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Select Currency',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: this.context.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              GridView.count(
+                crossAxisCount: 4,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 1,
+                children: _currencies.map((c) {
+                  final isSelected = currency == c.symbol;
+                  return GestureDetector(
+                    onTap: () {
+                      ref.read(settingsProvider.notifier).setCurrency(c.symbol);
+                      Navigator.pop(context);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primary.withValues(alpha: 0.1)
+                            : this.context.chipBackground,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSelected
+                              ? AppColors.primary
+                              : this.context.dividerColor,
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            c.symbol,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : this.context.textPrimary,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            c.name,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isSelected
+                                  ? FontWeight.w600
+                                  : FontWeight.w500,
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : this.context.subtitleColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildThemeRow(ThemeMode themeMode) {
+    final isDark = themeMode == ThemeMode.dark;
+
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.accent.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(
+            Icons.palette_rounded,
+            color: AppColors.accent,
+            size: 18,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Theme',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: context.textPrimary,
+                ),
+              ),
+              Text(
+                isDark ? 'Dark Mode' : 'Light Mode',
+                style: TextStyle(fontSize: 11, color: context.subtitleColor),
+              ),
+            ],
+          ),
+        ),
+        // Dark / Light toggle chips
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: _themes.map((theme) {
+            final isSelected = (theme.value == 'dark') == isDark;
+            return Padding(
+              padding: const EdgeInsets.only(left: 6),
+              child: GestureDetector(
+                onTap: () {
+                  ref.read(themeProvider.notifier).setThemeMode(theme.value);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary.withValues(alpha: 0.1)
+                        : context.chipBackground,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.primary.withValues(alpha: 0.5)
+                          : Colors.transparent,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        theme.icon,
+                        size: 16,
+                        color: isSelected
+                            ? AppColors.primary
+                            : context.subtitleColor,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        theme.label,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isSelected
+                              ? AppColors.primary
+                              : context.subtitleColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
   Widget _buildMenuSection(String title, List<_MenuItem> items) {
     return Container(
-      decoration: AppDecorations.card(),
+      decoration: AppDecorations.card(context),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,7 +763,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   fontWeight: FontWeight.w600,
                                   color: item.color == AppColors.error
                                       ? AppColors.error
-                                      : AppColors.textPrimary,
+                                      : context.textPrimary,
                                 ),
                               ),
                               const SizedBox(height: 2),
@@ -446,7 +771,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 item.subtitle,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey[500],
+                                  color: context.subtitleColor,
                                 ),
                               ),
                             ],
@@ -454,7 +779,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         Icon(
                           Icons.chevron_right_rounded,
-                          color: Colors.grey[350],
+                          color: context.subtitleColor,
                           size: 22,
                         ),
                       ],
@@ -462,7 +787,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 if (!isLast)
-                  Divider(height: 1, indent: 74, color: Colors.grey[100]),
+                  Divider(height: 1, indent: 74, color: context.dividerColor),
               ],
             );
           }),
@@ -489,23 +814,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
         const SizedBox(height: 10),
-        const Text(
+        Text(
           'Expensar',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+            color: context.textPrimary,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           'Version 1.0.0',
-          style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+          style: TextStyle(fontSize: 12, color: context.subtitleColor),
         ),
         const SizedBox(height: 8),
         Text(
           'Your personal finance companion',
-          style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+          style: TextStyle(fontSize: 13, color: context.subtitleColor),
         ),
       ],
     );
@@ -585,7 +910,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
 
-    if (importResult.success) _loadData();
+    if (importResult.success) {
+      // Reload all providers
+      ref.read(walletsProvider.notifier).load();
+      ref.read(budgetsProvider.notifier).load();
+      ref.read(creditsProvider.notifier).load();
+      ref.read(debtsProvider.notifier).load();
+      ref.read(loansProvider.notifier).load();
+      ref.read(settingsProvider.notifier).reload();
+    }
   }
 
   void _showResetDialog() {
@@ -626,7 +959,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 );
               }
-              _loadData();
+              // Reload all providers
+              ref.read(walletsProvider.notifier).load();
+              ref.read(budgetsProvider.notifier).load();
+              ref.read(creditsProvider.notifier).load();
+              ref.read(debtsProvider.notifier).load();
+              ref.read(loansProvider.notifier).load();
+              ref.read(settingsProvider.notifier).reload();
             },
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Reset Everything'),
@@ -635,6 +974,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
+}
+
+class _CurrencyOption {
+  final String symbol;
+  final String name;
+
+  const _CurrencyOption({required this.symbol, required this.name});
+}
+
+class _ThemeOption {
+  final String value;
+  final String label;
+  final IconData icon;
+
+  const _ThemeOption({
+    required this.value,
+    required this.label,
+    required this.icon,
+  });
 }
 
 class _MenuItem {

@@ -1,39 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/loan.dart';
-import '../services/database_service.dart';
+import '../providers/data_providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 
-class LoansScreen extends StatefulWidget {
+class LoansScreen extends ConsumerWidget {
   const LoansScreen({super.key});
 
   @override
-  State<LoansScreen> createState() => _LoansScreenState();
-}
-
-class _LoansScreenState extends State<LoansScreen> {
-  List<Loan> _loans = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    final loans = await DatabaseService.getLoans();
-    if (!mounted) return;
-    setState(() => _loans = loans);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final totalBalance = _loans.fold<double>(0, (sum, l) => sum + l.balance);
-    final totalPaid = _loans.fold<double>(0, (sum, l) => sum + l.paidAmount);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final loans = ref.watch(loansProvider);
+    final totalBalance = loans.fold<double>(0, (sum, l) => sum + l.balance);
+    final totalPaid = loans.fold<double>(0, (sum, l) => sum + l.paidAmount);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.scaffoldBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -102,7 +85,7 @@ class _LoansScreenState extends State<LoansScreen> {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: _loans.isEmpty
+              child: loans.isEmpty
                   ? Center(
                       child: Text(
                         'No loans yet',
@@ -111,9 +94,9 @@ class _LoansScreenState extends State<LoansScreen> {
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: _loans.length,
+                      itemCount: loans.length,
                       itemBuilder: (context, index) =>
-                          _buildLoanCard(_loans[index]),
+                          _buildLoanCard(context, loans[index]),
                     ),
             ),
           ],
@@ -122,14 +105,14 @@ class _LoansScreenState extends State<LoansScreen> {
     );
   }
 
-  Widget _buildLoanCard(Loan loan) {
+  Widget _buildLoanCard(BuildContext context, Loan loan) {
     final progress = loan.paidAmount / (loan.balance + loan.paidAmount);
     final nextPayment =
         loan.transactions.where((t) => t.status == 'Upcoming').toList()
           ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
 
     return GestureDetector(
-      onTap: () => _showLoanDetails(loan),
+      onTap: () => _showLoanDetails(context, loan),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
@@ -222,7 +205,7 @@ class _LoansScreenState extends State<LoansScreen> {
     );
   }
 
-  void _showLoanDetails(Loan loan) {
+  void _showLoanDetails(BuildContext context, Loan loan) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

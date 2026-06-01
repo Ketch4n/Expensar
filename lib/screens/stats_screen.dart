@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../models/wallet.dart';
@@ -6,51 +7,24 @@ import '../models/budget.dart';
 import '../models/credit.dart';
 import '../models/debt.dart';
 import '../models/loan.dart';
-import '../services/database_service.dart';
+import '../providers/data_providers.dart';
 import '../services/dashboard_helper.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 
-class StatsScreen extends StatefulWidget {
+class StatsScreen extends ConsumerWidget {
   const StatsScreen({super.key});
 
   @override
-  State<StatsScreen> createState() => _StatsScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wallets = ref.watch(walletsProvider);
+    final budgets = ref.watch(budgetsProvider);
+    final credits = ref.watch(creditsProvider);
+    final debts = ref.watch(debtsProvider);
+    final loans = ref.watch(loansProvider);
 
-class _StatsScreenState extends State<StatsScreen> {
-  List<Wallet> _wallets = [];
-  List<Budget> _budgets = [];
-  List<Credit> _credits = [];
-  List<Debt> _debts = [];
-  List<Loan> _loans = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    final wallets = await DatabaseService.getWallets();
-    final budgets = await DatabaseService.getBudgets();
-    final credits = await DatabaseService.getCredits();
-    final debts = await DatabaseService.getDebts();
-    final loans = await DatabaseService.getLoans();
-    if (!mounted) return;
-    setState(() {
-      _wallets = wallets;
-      _budgets = budgets;
-      _credits = credits;
-      _debts = debts;
-      _loans = loans;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
-      color: AppColors.background,
+      color: context.scaffoldBackground,
       child: SafeArea(
         bottom: false,
         child: Column(
@@ -61,13 +35,13 @@ class _StatsScreenState extends State<StatsScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   children: [
-                    _buildOverviewCards(),
+                    _buildOverviewCards(context, wallets),
                     const SizedBox(height: 20),
-                    _buildSpendingTrendChart(),
+                    _buildSpendingTrendChart(context, wallets),
                     const SizedBox(height: 20),
-                    _buildCategoryBreakdown(),
+                    _buildCategoryBreakdown(context, budgets, loans, credits),
                     const SizedBox(height: 20),
-                    _buildDebtSummary(),
+                    _buildDebtSummary(context, debts, loans, credits),
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -79,14 +53,14 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _buildOverviewCards() {
-    final totalBalance = _wallets.fold<double>(0, (sum, w) => sum + w.balance);
+  Widget _buildOverviewCards(BuildContext context, List<Wallet> wallets) {
+    final totalBalance = wallets.fold<double>(0, (sum, w) => sum + w.balance);
     final now = DateTime.now();
     final startOfMonth = DateTime(now.year, now.month, 1);
     double monthlyIncome = 0;
     double monthlyExpenses = 0;
 
-    for (final wallet in _wallets) {
+    for (final wallet in wallets) {
       for (final log in wallet.logs) {
         if (log.date.isAfter(startOfMonth)) {
           if (log.amount > 0) {
@@ -104,6 +78,7 @@ class _StatsScreenState extends State<StatsScreen> {
           children: [
             Expanded(
               child: _statCard(
+                context,
                 'Total Balance',
                 '₱${NumberFormat('#,##0').format(totalBalance)}',
                 Icons.account_balance_wallet,
@@ -113,6 +88,7 @@ class _StatsScreenState extends State<StatsScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _statCard(
+                context,
                 'Monthly Spend',
                 '₱${NumberFormat('#,##0').format(monthlyExpenses)}',
                 Icons.trending_down,
@@ -126,6 +102,7 @@ class _StatsScreenState extends State<StatsScreen> {
           children: [
             Expanded(
               child: _statCard(
+                context,
                 'Monthly Income',
                 '₱${NumberFormat('#,##0').format(monthlyIncome)}',
                 Icons.trending_up,
@@ -135,6 +112,7 @@ class _StatsScreenState extends State<StatsScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: _statCard(
+                context,
                 'Net Flow',
                 '₱${NumberFormat('#,##0').format(monthlyIncome - monthlyExpenses)}',
                 Icons.swap_vert,
@@ -149,13 +127,19 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _statCard(String label, String value, IconData icon, Color color) {
+  Widget _statCard(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardColor,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: const [AppDecorations.cardShadow],
+        boxShadow: [AppDecorations.cardShadow(context)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -175,17 +159,17 @@ class _StatsScreenState extends State<StatsScreen> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[500],
+              color: context.subtitleColor,
               letterSpacing: 0.3,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              color: context.textPrimary,
             ),
           ),
         ],
@@ -193,9 +177,9 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _buildSpendingTrendChart() {
+  Widget _buildSpendingTrendChart(BuildContext context, List<Wallet> wallets) {
     final dailySpending = DashboardHelper.calculateDailySpending(
-      _wallets,
+      wallets,
       days: 14,
     );
     final chartData = dailySpending;
@@ -210,7 +194,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(),
+      decoration: AppDecorations.card(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -218,7 +202,7 @@ class _StatsScreenState extends State<StatsScreen> {
           const SizedBox(height: 4),
           Text(
             'Last 14 days',
-            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            style: TextStyle(fontSize: 12, color: context.subtitleColor),
           ),
           const SizedBox(height: 20),
           SizedBox(
@@ -230,7 +214,9 @@ class _StatsScreenState extends State<StatsScreen> {
                   drawVerticalLine: false,
                   horizontalInterval: maxY / 4,
                   getDrawingHorizontalLine: (value) => FlLine(
-                    color: Colors.grey.withValues(alpha: 0.1),
+                    color: context.isDark
+                        ? Colors.grey.withValues(alpha: 0.2)
+                        : Colors.grey.withValues(alpha: 0.1),
                     strokeWidth: 1,
                   ),
                 ),
@@ -249,7 +235,7 @@ class _StatsScreenState extends State<StatsScreen> {
                               DateFormat('d').format(days[index]),
                               style: TextStyle(
                                 fontSize: 10,
-                                color: Colors.grey[400],
+                                color: context.subtitleColor,
                               ),
                             ),
                           );
@@ -298,16 +284,21 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _buildCategoryBreakdown() {
+  Widget _buildCategoryBreakdown(
+    BuildContext context,
+    List<Budget> budgets,
+    List<Loan> loans,
+    List<Credit> credits,
+  ) {
     final categoryTotals = <String, double>{};
-    for (final budget in _budgets) {
+    for (final budget in budgets) {
       final category = budget.category.isNotEmpty ? budget.category : 'Other';
       categoryTotals[category] =
           (categoryTotals[category] ?? 0) + budget.amount;
     }
 
     double loanTotal = 0;
-    for (final loan in _loans) {
+    for (final loan in loans) {
       for (final t in loan.transactions) {
         if (t.status == 'Upcoming') loanTotal += t.amountDue;
       }
@@ -315,7 +306,7 @@ class _StatsScreenState extends State<StatsScreen> {
     if (loanTotal > 0) categoryTotals['Loans'] = loanTotal;
 
     double creditTotal = 0;
-    for (final credit in _credits) {
+    for (final credit in credits) {
       if (credit.status == 'Pending') creditTotal += credit.outstandingBalance;
     }
     if (creditTotal > 0) categoryTotals['Credit Cards'] = creditTotal;
@@ -332,7 +323,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(),
+      decoration: AppDecorations.card(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -344,7 +335,7 @@ class _StatsScreenState extends State<StatsScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Text(
                   'No expense data yet',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[400]),
+                  style: TextStyle(fontSize: 14, color: context.subtitleColor),
                 ),
               ),
             )
@@ -402,25 +393,28 @@ class _StatsScreenState extends State<StatsScreen> {
                       child: Text(
                         category.key[0].toUpperCase() +
                             category.key.substring(1),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.textPrimary,
+                          color: context.textPrimary,
                         ),
                       ),
                     ),
                     Text(
                       '₱${NumberFormat('#,##0').format(category.value)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        color: context.textPrimary,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '${percentage.toStringAsFixed(1)}%',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[500]),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: context.subtitleColor,
+                      ),
                     ),
                   ],
                 ),
@@ -432,59 +426,63 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _buildDebtSummary() {
-    final totalDebt = _debts.fold<double>(
+  Widget _buildDebtSummary(
+    BuildContext context,
+    List<Debt> debts,
+    List<Loan> loans,
+    List<Credit> credits,
+  ) {
+    final totalDebt = debts.fold<double>(
       0,
       (sum, d) => sum + d.remainingBalance,
     );
-    final totalLoanBalance = _loans.fold<double>(
-      0,
-      (sum, l) => sum + l.balance,
-    );
-    final totalCreditOwed = _credits.fold<double>(
+    final totalLoanBalance = loans.fold<double>(0, (sum, l) => sum + l.balance);
+    final totalCreditOwed = credits.fold<double>(
       0,
       (sum, c) => sum + c.outstandingBalance,
     );
     final totalOwed = totalDebt + totalLoanBalance + totalCreditOwed;
-    final totalLoanPaid = _loans.fold<double>(
-      0,
-      (sum, l) => sum + l.paidAmount,
-    );
+    final totalLoanPaid = loans.fold<double>(0, (sum, l) => sum + l.paidAmount);
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(),
+      decoration: AppDecorations.card(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('DEBT OVERVIEW', style: AppTextStyles.sectionLabel),
           const SizedBox(height: 16),
           _debtRow(
+            context,
             'Total Owed',
             '₱${NumberFormat('#,##0').format(totalOwed)}',
             AppColors.error,
           ),
           const SizedBox(height: 12),
           _debtRow(
+            context,
             'Loans Remaining',
             '₱${NumberFormat('#,##0').format(totalLoanBalance)}',
             AppColors.warning,
           ),
           const SizedBox(height: 12),
           _debtRow(
+            context,
             'Credit Card Balance',
             '₱${NumberFormat('#,##0').format(totalCreditOwed)}',
             AppColors.accent,
           ),
           const SizedBox(height: 12),
           _debtRow(
+            context,
             'Personal Debts',
             '₱${NumberFormat('#,##0').format(totalDebt)}',
             AppColors.secondary,
           ),
           if (totalLoanPaid > 0) ...[
-            const Divider(height: 24),
+            Divider(height: 24, color: context.dividerColor),
             _debtRow(
+              context,
               'Total Paid (Loans)',
               '₱${NumberFormat('#,##0').format(totalLoanPaid)}',
               AppColors.primary,
@@ -495,7 +493,12 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-  Widget _debtRow(String label, String value, Color color) {
+  Widget _debtRow(
+    BuildContext context,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Row(
       children: [
         Container(
@@ -509,7 +512,7 @@ class _StatsScreenState extends State<StatsScreen> {
             label,
             style: TextStyle(
               fontSize: 13,
-              color: Colors.grey[600],
+              color: context.subtitleColor,
               fontWeight: FontWeight.w500,
             ),
           ),

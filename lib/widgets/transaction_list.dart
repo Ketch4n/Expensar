@@ -19,7 +19,7 @@ class TransactionList extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(),
+      decoration: AppDecorations.card(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -31,12 +31,12 @@ class TransactionList extends StatelessWidget {
                 color: AppColors.primary,
               ),
               const SizedBox(width: 8),
-              const Text(
+              Text(
                 'Upcoming',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: context.textPrimary,
                 ),
               ),
             ],
@@ -44,7 +44,7 @@ class TransactionList extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Planned and recurring money moves',
-            style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            style: TextStyle(fontSize: 13, color: context.subtitleColor),
           ),
           const SizedBox(height: 20),
 

@@ -1,39 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/wallet.dart';
-import '../services/database_service.dart';
+import '../providers/data_providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 import '../widgets/add_wallet_dialog.dart';
 
-class WalletsScreen extends StatefulWidget {
+class WalletsScreen extends ConsumerWidget {
   const WalletsScreen({super.key});
 
   @override
-  State<WalletsScreen> createState() => _WalletsScreenState();
-}
-
-class _WalletsScreenState extends State<WalletsScreen> {
-  List<Wallet> _wallets = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    final wallets = await DatabaseService.getWallets();
-    if (!mounted) return;
-    setState(() => _wallets = wallets);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final totalBalance = _wallets.fold<double>(0, (sum, w) => sum + w.balance);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final wallets = ref.watch(walletsProvider);
+    final totalBalance = wallets.fold<double>(0, (sum, w) => sum + w.balance);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.scaffoldBackground,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -44,25 +27,41 @@ class _WalletsScreenState extends State<WalletsScreen> {
                 Padding(
                   padding: const EdgeInsets.only(right: 20),
                   child: GestureDetector(
-                    onTap: _showAddWalletDialog,
+                    onTap: () => _showAddWalletDialog(context, ref),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color: context.isDark
+                            ? AppColors.primary.withValues(alpha: 0.1)
+                            : AppColors.primary,
                         borderRadius: BorderRadius.circular(12),
+                        border: context.isDark
+                            ? Border.all(
+                                color: AppColors.primary.withValues(alpha: 0.4),
+                                width: 1,
+                              )
+                            : null,
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.add, color: Colors.white, size: 18),
-                          SizedBox(width: 4),
+                          Icon(
+                            Icons.add,
+                            color: context.isDark
+                                ? AppColors.primaryLighter
+                                : Colors.white,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 4),
                           Text(
                             'Add',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: context.isDark
+                                  ? AppColors.primaryLighter
+                                  : Colors.white,
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                             ),
@@ -80,28 +79,43 @@ class _WalletsScreenState extends State<WalletsScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primaryLight],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  gradient: context.isDark
+                      ? null
+                      : const LinearGradient(
+                          colors: [AppColors.primary, AppColors.primaryLight],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                  color: context.isDark
+                      ? AppColors.primary.withValues(alpha: 0.1)
+                      : null,
                   borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+                  border: context.isDark
+                      ? Border.all(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                          width: 1,
+                        )
+                      : null,
+                  boxShadow: context.isDark
+                      ? null
+                      : [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'TOTAL BALANCE',
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.white70,
+                        color: context.isDark
+                            ? AppColors.primary.withValues(alpha: 0.7)
+                            : Colors.white70,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 0.5,
                       ),
@@ -109,18 +123,22 @@ class _WalletsScreenState extends State<WalletsScreen> {
                     const SizedBox(height: 8),
                     Text(
                       '₱${NumberFormat('#,##0.00').format(totalBalance)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: context.isDark
+                            ? AppColors.primaryLighter
+                            : Colors.white,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${_wallets.length} accounts',
-                      style: const TextStyle(
+                      '${wallets.length} accounts',
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Colors.white70,
+                        color: context.isDark
+                            ? AppColors.primary.withValues(alpha: 0.5)
+                            : Colors.white70,
                       ),
                     ),
                   ],
@@ -135,9 +153,9 @@ class _WalletsScreenState extends State<WalletsScreen> {
                   right: 20,
                   bottom: 100,
                 ),
-                itemCount: _wallets.length,
+                itemCount: wallets.length,
                 itemBuilder: (context, index) =>
-                    _buildWalletCard(_wallets[index]),
+                    _buildWalletCard(context, wallets[index]),
               ),
             ),
           ],
@@ -146,7 +164,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
     );
   }
 
-  Widget _buildWalletCard(Wallet wallet) {
+  Widget _buildWalletCard(BuildContext context, Wallet wallet) {
     final (icon, iconColor) = switch (wallet.type) {
       'Debit' => (Icons.credit_card, AppColors.secondary),
       'Credit' => (Icons.credit_score, const Color(0xFFE91E63)),
@@ -158,7 +176,7 @@ class _WalletsScreenState extends State<WalletsScreen> {
     };
 
     return GestureDetector(
-      onTap: () => _showWalletDetails(wallet),
+      onTap: () => _showWalletDetails(context, wallet),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -243,16 +261,16 @@ class _WalletsScreenState extends State<WalletsScreen> {
     );
   }
 
-  void _showAddWalletDialog() {
+  void _showAddWalletDialog(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const AddWalletDialog(),
-    ).then((_) => _loadData());
+    ).then((_) => ref.read(walletsProvider.notifier).load());
   }
 
-  void _showWalletDetails(Wallet wallet) {
+  void _showWalletDetails(BuildContext context, Wallet wallet) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

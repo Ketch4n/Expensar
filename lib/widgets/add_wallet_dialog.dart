@@ -52,9 +52,9 @@ class _AddWalletDialogState extends State<AddWalletDialog> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: context.cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -69,18 +69,18 @@ class _AddWalletDialogState extends State<AddWalletDialog> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: context.isDark ? Colors.grey[600] : Colors.grey[300],
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Add Wallet',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: context.textPrimary,
                 ),
               ),
               const SizedBox(height: 20),
@@ -93,19 +93,19 @@ class _AddWalletDialogState extends State<AddWalletDialog> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: AppColors.background,
+                  fillColor: context.scaffoldBackground,
                 ),
                 validator: (value) => value == null || value.trim().isEmpty
                     ? 'Please enter a wallet name'
                     : null,
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Account Type',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: context.textPrimary,
                 ),
               ),
               const SizedBox(height: 10),
@@ -137,10 +137,10 @@ class _AddWalletDialogState extends State<AddWalletDialog> {
                       decoration: BoxDecoration(
                         color: isSelected
                             ? color.withValues(alpha: 0.1)
-                            : Colors.grey[50],
+                            : context.chipBackground,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: isSelected ? color : Colors.grey.shade200,
+                          color: isSelected ? color : context.dividerColor,
                           width: isSelected ? 1.5 : 1,
                         ),
                       ),
@@ -150,7 +150,7 @@ class _AddWalletDialogState extends State<AddWalletDialog> {
                           Icon(
                             icon,
                             size: 18,
-                            color: isSelected ? color : Colors.grey[500],
+                            color: isSelected ? color : context.subtitleColor,
                           ),
                           const SizedBox(width: 6),
                           Text(
@@ -160,7 +160,7 @@ class _AddWalletDialogState extends State<AddWalletDialog> {
                               fontWeight: isSelected
                                   ? FontWeight.w700
                                   : FontWeight.w500,
-                              color: isSelected ? color : Colors.grey[600],
+                              color: isSelected ? color : context.textPrimary,
                             ),
                           ),
                         ],
@@ -182,7 +182,7 @@ class _AddWalletDialogState extends State<AddWalletDialog> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   filled: true,
-                  fillColor: AppColors.background,
+                  fillColor: context.scaffoldBackground,
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {

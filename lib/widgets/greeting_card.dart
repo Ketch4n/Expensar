@@ -45,7 +45,7 @@ class GreetingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(),
+      decoration: AppDecorations.card(context),
       child: Row(
         children: [
           Container(
@@ -68,7 +68,7 @@ class GreetingCard extends StatelessWidget {
                   _getDateString(),
                   style: TextStyle(
                     fontSize: 11,
-                    color: Colors.grey[500],
+                    color: context.subtitleColor,
                     fontWeight: FontWeight.w500,
                     letterSpacing: 0.5,
                   ),
@@ -76,10 +76,10 @@ class GreetingCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${_getGreeting()}, $userName!',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color: context.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -110,7 +110,7 @@ class GreetingCard extends StatelessWidget {
                   'Good job leading your month, but it still looks like practical spending more than random leaking.',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[600],
+                    color: context.subtitleColor,
                     height: 1.4,
                   ),
                 ),

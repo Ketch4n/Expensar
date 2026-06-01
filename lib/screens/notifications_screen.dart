@@ -106,15 +106,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.scaffoldBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: context.scaffoldBackground,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: AppColors.textPrimary,
-          ),
+          icon: Icon(Icons.arrow_back_rounded, color: context.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
@@ -196,7 +193,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         border: daysLeft <= 1
             ? Border.all(color: AppColors.error.withValues(alpha: 0.3))
             : null,
-        boxShadow: const [AppDecorations.cardShadow],
+        boxShadow: [AppDecorations.cardShadow()],
       ),
       child: Row(
         children: [

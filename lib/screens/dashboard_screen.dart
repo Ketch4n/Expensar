@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/wallet.dart';
 import '../models/budget.dart';
 import '../models/credit.dart';
 import '../models/loan.dart';
-import '../services/database_service.dart';
+import '../providers/settings_provider.dart';
+import '../providers/data_providers.dart';
 import '../services/dashboard_helper.dart';
 import '../theme/app_theme.dart';
 import '../widgets/spending_chart.dart';
@@ -19,25 +21,17 @@ import 'budgets_screen.dart';
 import 'stats_screen.dart';
 import 'profile_screen.dart';
 import 'notifications_screen.dart';
-import 'settings_screen.dart';
 
-class DashboardScreen extends StatefulWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  State<DashboardScreen> createState() => _DashboardScreenState();
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
-  List<Wallet> _wallets = [];
-  List<Budget> _budgets = [];
-  List<Credit> _credits = [];
-  List<Loan> _loans = [];
-
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   int _currentIndex = 1;
   late final PageController _pageController;
-
-  // Scroll-hide state
   bool _isNavVisible = true;
 
   @override
@@ -45,7 +39,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     _pageController = PageController(initialPage: 1);
     _currentIndex = 1;
-    _loadData();
   }
 
   @override
@@ -54,24 +47,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    final wallets = await DatabaseService.getWallets();
-    final budgets = await DatabaseService.getBudgets();
-    final credits = await DatabaseService.getCredits();
-    final loans = await DatabaseService.getLoans();
-    if (!mounted) return;
-    setState(() {
-      _wallets = wallets;
-      _budgets = budgets;
-      _credits = credits;
-      _loans = loans;
-    });
+  String _getGreeting(String userName) {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning, $userName';
+    if (hour < 17) return 'Good afternoon, $userName';
+    return 'Good evening, $userName';
   }
 
   void _onPageChanged(int index) {
     setState(() {
       _currentIndex = index;
-      // Hide nav on Stats (index 0), show on Home (1) and Wallets (2)
       if (index == 0) {
         _isNavVisible = false;
       } else {
@@ -89,7 +74,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   bool _handleScrollNotification(ScrollNotification notification) {
-    // Always show nav bar on Wallets screen (index 2), always hide on Stats (index 0)
     if (_currentIndex == 2) {
       if (!_isNavVisible) setState(() => _isNavVisible = true);
       return false;
@@ -98,13 +82,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (notification is ScrollUpdateNotification) {
       final delta = notification.scrollDelta ?? 0;
-
-      // Scroll down → hide nav
       if (delta > 2 && _isNavVisible) {
         setState(() => _isNavVisible = false);
-      }
-      // Scroll up → show nav
-      else if (delta < -2 && !_isNavVisible) {
+      } else if (delta < -2 && !_isNavVisible) {
         setState(() => _isNavVisible = true);
       }
     }
@@ -114,7 +94,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.scaffoldBackground,
       body: NotificationListener<ScrollNotification>(
         onNotification: _handleScrollNotification,
         child: PageView(
@@ -142,21 +122,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           padding: const EdgeInsets.only(left: 40, right: 20, bottom: 16),
           child: Row(
             children: [
-              // Floating nav bar
               Expanded(
                 child: Container(
                   height: 64,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: context.cardColor,
                     borderRadius: BorderRadius.circular(32),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
+                        color: context.isDark
+                            ? Colors.black.withValues(alpha: 0.4)
+                            : Colors.black.withValues(alpha: 0.1),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
+                        color: context.isDark
+                            ? Colors.black.withValues(alpha: 0.2)
+                            : Colors.black.withValues(alpha: 0.05),
                         blurRadius: 6,
                         offset: const Offset(0, 2),
                       ),
@@ -172,26 +155,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              // FAB add expense
               GestureDetector(
                 onTap: _showAddExpense,
                 child: Container(
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
+                    color: context.isDark
+                        ? AppColors.primary.withValues(alpha: 0.15)
+                        : AppColors.primary,
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.35),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
+                    border: context.isDark
+                        ? Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.4),
+                            width: 1.5,
+                          )
+                        : null,
+                    boxShadow: context.isDark
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: AppColors.primary.withValues(alpha: 0.35),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.add_rounded,
-                    color: Colors.white,
+                    color: context.isDark
+                        ? AppColors.primaryLighter
+                        : Colors.white,
                     size: 28,
                   ),
                 ),
@@ -224,7 +218,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: Icon(
                 icon,
-                color: isActive ? AppColors.primary : Colors.grey[400],
+                color: isActive ? AppColors.primary : context.subtitleColor,
                 size: 24,
               ),
             ),
@@ -233,7 +227,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               label,
               style: TextStyle(
                 fontSize: 10,
-                color: isActive ? AppColors.primary : Colors.grey[400],
+                color: isActive ? AppColors.primary : context.subtitleColor,
                 fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
@@ -244,28 +238,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildHomePage() {
-    final totalBalance = _wallets.fold<double>(0, (sum, w) => sum + w.balance);
-    final dailySpending = DashboardHelper.calculateDailySpending(_wallets);
+    final wallets = ref.watch(walletsProvider);
+    final budgets = ref.watch(budgetsProvider);
+    final credits = ref.watch(creditsProvider);
+    final loans = ref.watch(loansProvider);
+    final settings = ref.watch(settingsProvider);
+
+    final totalBalance = wallets.fold<double>(0, (sum, w) => sum + w.balance);
+    final dailySpending = DashboardHelper.calculateDailySpending(wallets);
     final todayTotal = dailySpending.last;
     final weekTotal = dailySpending.fold<double>(0, (sum, d) => sum + d);
-    final monthlySpending = _calculateMonthlySpending();
+    final monthlySpending = _calculateMonthlySpending(wallets);
 
     return SafeArea(
       bottom: false,
       child: Column(
         children: [
-          // Header / App Bar
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  TimeOfDay.now().format(context),
-                  style: const TextStyle(
+                  _getGreeting(settings.userName),
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
+                    color: context.textPrimary,
                   ),
                 ),
                 Row(
@@ -280,30 +279,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         );
                       },
-                      color: Colors.grey[600],
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.settings_outlined),
-                      onPressed: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const SettingsScreen(),
-                          ),
-                        );
-                        _loadData();
-                      },
-                      color: Colors.grey[600],
+                      color: context.subtitleColor,
                     ),
                     GestureDetector(
-                      onTap: () async {
-                        await Navigator.push(
+                      onTap: () {
+                        Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (_) => const ProfileScreen(),
                           ),
                         );
-                        _loadData();
                       },
                       child: Container(
                         width: 36,
@@ -339,10 +324,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     weekTotal: weekTotal,
                     monthTotal: monthlySpending,
                   ),
-                  ..._buildConditionalSections(),
+                  ..._buildConditionalSections(wallets, budgets),
                   const SizedBox(height: 20),
-                  _buildUpcomingTransactions(),
-                  // Extra padding so content isn't hidden behind floating nav
+                  _buildUpcomingTransactions(wallets, budgets, loans, credits),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -353,10 +337,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  List<Widget> _buildConditionalSections() {
+  List<Widget> _buildConditionalSections(
+    List<Wallet> wallets,
+    List<Budget> budgets,
+  ) {
     final widgets = <Widget>[];
-    final bills = _buildUpcomingBills();
-    final payday = _buildPaydayCard();
+    final bills = _buildUpcomingBills(budgets);
+    final payday = _buildPaydayCard(wallets);
 
     if (bills is! SizedBox) {
       widgets.add(const SizedBox(height: 20));
@@ -369,11 +356,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return widgets;
   }
 
-  double _calculateMonthlySpending() {
+  double _calculateMonthlySpending(List<Wallet> wallets) {
     final now = DateTime.now();
     final startOfMonth = DateTime(now.year, now.month, 1);
     double total = 0;
-    for (final wallet in _wallets) {
+    for (final wallet in wallets) {
       for (final log in wallet.logs) {
         if (log.date.isAfter(startOfMonth) || log.date == startOfMonth) {
           final desc = log.description.toLowerCase();
@@ -391,7 +378,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildQuickActions() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: AppDecorations.card(),
+      decoration: AppDecorations.card(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -443,7 +430,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           context,
           MaterialPageRoute(builder: (_) => screen),
         );
-        _loadData();
+        _refreshData();
       },
       child: Column(
         children: [
@@ -462,7 +449,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
+              color: context.textPrimary,
             ),
           ),
         ],
@@ -471,30 +458,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildWalletSummary(double totalBalance) {
+    final isDark = context.isDark;
+
     return GestureDetector(
       onTap: () async {
         await Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const WalletsScreen()),
         );
-        _loadData();
+        _refreshData();
       },
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppColors.primary, AppColors.primaryLight],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: isDark
+              ? null
+              : const LinearGradient(
+                  colors: [AppColors.primary, AppColors.primaryLight],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+          color: isDark ? AppColors.primary.withValues(alpha: 0.1) : null,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          border: isDark
+              ? Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                  width: 1,
+                )
+              : null,
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
         ),
         child: Row(
           children: [
@@ -502,11 +502,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'TOTAL BALANCE',
                     style: TextStyle(
                       fontSize: 11,
-                      color: Colors.white70,
+                      color: isDark
+                          ? AppColors.primary.withValues(alpha: 0.7)
+                          : Colors.white70,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,
                     ),
@@ -514,18 +516,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 4),
                   Text(
                     '₱${NumberFormat('#,##0.00').format(totalBalance)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: isDark ? AppColors.primaryLighter : Colors.white,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios,
-              color: Colors.white70,
+              color: isDark
+                  ? AppColors.primary.withValues(alpha: 0.5)
+                  : Colors.white70,
               size: 16,
             ),
           ],
@@ -534,8 +538,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildUpcomingBills() {
-    final sorted = List<Budget>.from(_budgets)
+  Widget _buildUpcomingBills(List<Budget> budgets) {
+    final sorted = List<Budget>.from(budgets)
       ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
     if (sorted.isEmpty) return const SizedBox.shrink();
 
@@ -545,11 +549,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           context,
           MaterialPageRoute(builder: (_) => const BudgetsScreen()),
         );
-        _loadData();
+        _refreshData();
       },
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: AppDecorations.card(),
+        decoration: AppDecorations.card(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -561,7 +565,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'See all →',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Colors.grey[500],
+                    color: context.subtitleColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -592,12 +596,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(budget.name, style: AppTextStyles.cardTitle),
+                          Text(
+                            budget.name,
+                            style: AppTextStyles.cardTitle.copyWith(
+                              color: context.textPrimary,
+                            ),
+                          ),
                           Text(
                             DateFormat('MMM d').format(budget.dueDate),
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[500],
+                              color: context.subtitleColor,
                             ),
                           ),
                         ],
@@ -610,7 +619,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           budget.amount > 0
                               ? '₱${NumberFormat('#,##0').format(budget.amount)}'
                               : 'Free',
-                          style: AppTextStyles.cardTitle,
+                          style: AppTextStyles.cardTitle.copyWith(
+                            color: context.textPrimary,
+                          ),
                         ),
                         if (daysLeft >= 0)
                           Text(
@@ -620,7 +631,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               fontWeight: FontWeight.w600,
                               color: daysLeft <= 3
                                   ? AppColors.error
-                                  : Colors.grey[500],
+                                  : context.subtitleColor,
                             ),
                           ),
                       ],
@@ -635,9 +646,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildPaydayCard() {
+  Widget _buildPaydayCard(List<Wallet> wallets) {
     final now = DateTime.now();
-    final recurring = _wallets.where(
+    final recurring = wallets.where(
       (w) => w.isRecurring && w.payDays.isNotEmpty,
     );
     if (recurring.isNotEmpty) {
@@ -656,7 +667,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       );
     }
 
-    final upcoming = _wallets.where(
+    final upcoming = wallets.where(
       (w) => w.status == 'Upcoming' && w.expectedPayoutDate != null,
     );
     if (upcoming.isEmpty) return const SizedBox.shrink();
@@ -669,12 +680,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildUpcomingTransactions() {
-    final income = DashboardHelper.buildIncomeTransactions(_wallets);
+  Widget _buildUpcomingTransactions(
+    List<Wallet> wallets,
+    List<Budget> budgets,
+    List<Loan> loans,
+    List<Credit> credits,
+  ) {
+    final income = DashboardHelper.buildIncomeTransactions(wallets);
     final expenses = DashboardHelper.buildExpenseTransactions(
-      _budgets,
-      _loans,
-      _credits,
+      budgets,
+      loans,
+      credits,
     );
     return TransactionList(transactions: [...income, ...expenses]);
   }
@@ -685,6 +701,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const AddExpenseDialog(),
-    ).then((_) => _loadData());
+    ).then((_) => _refreshData());
+  }
+
+  void _refreshData() {
+    ref.read(walletsProvider.notifier).load();
+    ref.read(budgetsProvider.notifier).load();
+    ref.read(creditsProvider.notifier).load();
+    ref.read(loansProvider.notifier).load();
   }
 }

@@ -1,42 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/debt.dart';
-import '../services/database_service.dart';
+import '../providers/data_providers.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
 
-class DebtsScreen extends StatefulWidget {
+class DebtsScreen extends ConsumerWidget {
   const DebtsScreen({super.key});
 
   @override
-  State<DebtsScreen> createState() => _DebtsScreenState();
-}
-
-class _DebtsScreenState extends State<DebtsScreen> {
-  List<Debt> _debts = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    final debts = await DatabaseService.getDebts();
-    if (!mounted) return;
-    setState(() => _debts = debts);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final pending = _debts.where((d) => d.status == 'Pending');
+  Widget build(BuildContext context, WidgetRef ref) {
+    final debts = ref.watch(debtsProvider);
+    final pending = debts.where((d) => d.status == 'Pending');
     final totalRemaining = pending.fold<double>(
       0,
       (sum, d) => sum + d.remainingBalance,
     );
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.scaffoldBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -86,7 +69,7 @@ class _DebtsScreenState extends State<DebtsScreen> {
                           ),
                         ),
                         Text(
-                          '${_debts.length - pending.length} paid',
+                          '${debts.length - pending.length} paid',
                           style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.primary,
@@ -100,7 +83,7 @@ class _DebtsScreenState extends State<DebtsScreen> {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: _debts.isEmpty
+              child: debts.isEmpty
                   ? Center(
                       child: Text(
                         'No debts yet',
@@ -109,9 +92,9 @@ class _DebtsScreenState extends State<DebtsScreen> {
                     )
                   : ListView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: _debts.length,
+                      itemCount: debts.length,
                       itemBuilder: (context, index) =>
-                          _buildDebtCard(_debts[index]),
+                          _buildDebtCard(context, debts[index]),
                     ),
             ),
           ],
@@ -120,11 +103,11 @@ class _DebtsScreenState extends State<DebtsScreen> {
     );
   }
 
-  Widget _buildDebtCard(Debt debt) {
+  Widget _buildDebtCard(BuildContext context, Debt debt) {
     final isPaid = debt.status == 'Paid';
 
     return GestureDetector(
-      onTap: () => _showDebtDetails(debt),
+      onTap: () => _showDebtDetails(context, debt),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -183,7 +166,7 @@ class _DebtsScreenState extends State<DebtsScreen> {
     );
   }
 
-  void _showDebtDetails(Debt debt) {
+  void _showDebtDetails(BuildContext context, Debt debt) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

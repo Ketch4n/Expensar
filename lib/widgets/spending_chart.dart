@@ -39,7 +39,7 @@ class SpendingChart extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: AppDecorations.card(),
+      decoration: AppDecorations.card(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -50,7 +50,7 @@ class SpendingChart extends StatelessWidget {
                 'SPENDING · LAST ${data.length} DAYS',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Colors.grey[500],
+                  color: context.subtitleColor,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
                 ),
@@ -60,7 +60,7 @@ class SpendingChart extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey[600],
+                  color: context.subtitleColor,
                 ),
               ),
             ],
@@ -93,7 +93,7 @@ class SpendingChart extends StatelessWidget {
                                     fontSize: 10,
                                     color: idx == dayLabels.length - 1
                                         ? AppColors.primary
-                                        : Colors.grey[400],
+                                        : context.subtitleColor,
                                     fontWeight: idx == dayLabels.length - 1
                                         ? FontWeight.w700
                                         : FontWeight.w500,
@@ -126,6 +126,8 @@ class SpendingChart extends StatelessWidget {
                             toY: data[index] == 0 ? 0.5 : data[index],
                             color: index == data.length - 1
                                 ? AppColors.primary
+                                : context.isDark
+                                ? Colors.grey[700]!
                                 : const Color(0xFFE0E0E0),
                             width: 8,
                             borderRadius: BorderRadius.circular(4),
@@ -141,12 +143,12 @@ class SpendingChart extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Today',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: Colors.grey,
+                        color: context.subtitleColor,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -161,7 +163,9 @@ class SpendingChart extends StatelessWidget {
                         Flexible(
                           child: Text(
                             '₱${NumberFormat('#,##0.00').format(todayAmount)}',
-                            style: AppTextStyles.amountLarge,
+                            style: AppTextStyles.amountLarge.copyWith(
+                              color: context.textPrimary,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -214,7 +218,7 @@ class _StatChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.grey[100],
+        color: context.chipBackground,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
@@ -224,15 +228,15 @@ class _StatChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 9,
               fontWeight: FontWeight.w600,
-              color: Colors.grey[500],
+              color: context.subtitleColor,
             ),
           ),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
+              color: context.textPrimary,
             ),
           ),
         ],
