@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/wallet.dart';
+import '../models/account_group.dart';
 import '../models/budget.dart';
 import '../models/credit.dart';
 import '../models/debt.dart';
@@ -20,6 +21,22 @@ class WalletsNotifier extends StateNotifier<List<Wallet>> {
 final walletsProvider = StateNotifierProvider<WalletsNotifier, List<Wallet>>(
   (ref) => WalletsNotifier(),
 );
+
+/// Account Groups provider.
+class AccountGroupsNotifier extends StateNotifier<List<AccountGroup>> {
+  AccountGroupsNotifier() : super([]) {
+    load();
+  }
+
+  Future<void> load() async {
+    state = await DatabaseService.getAccountGroups();
+  }
+}
+
+final accountGroupsProvider =
+    StateNotifierProvider<AccountGroupsNotifier, List<AccountGroup>>(
+      (ref) => AccountGroupsNotifier(),
+    );
 
 /// Budgets provider.
 class BudgetsNotifier extends StateNotifier<List<Budget>> {

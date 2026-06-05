@@ -5,7 +5,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/wallet.dart';
 import '../models/budget.dart';
-import '../models/credit.dart';
 import '../models/debt.dart';
 import '../models/loan.dart';
 import '../providers/theme_provider.dart';
@@ -13,6 +12,8 @@ import '../providers/settings_provider.dart';
 import '../providers/data_providers.dart';
 import '../services/database_service.dart';
 import '../services/backup_service.dart';
+import '../services/data_seeder.dart';
+import '../screens/dashboard_screen.dart';
 import '../theme/app_theme.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -65,7 +66,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final settings = ref.watch(settingsProvider);
     final wallets = ref.watch(walletsProvider);
     final budgets = ref.watch(budgetsProvider);
-    final credits = ref.watch(creditsProvider);
     final debts = ref.watch(debtsProvider);
     final loans = ref.watch(loansProvider);
     final themeMode = ref.watch(themeProvider);
@@ -174,7 +174,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 children: [
                   _buildNameSection(userName),
                   const SizedBox(height: 20),
-                  _buildQuickStats(wallets, budgets, credits, debts, loans),
+                  _buildQuickStats(wallets, budgets, debts, loans),
                   const SizedBox(height: 20),
                   _buildSettingsSection(currency, themeMode),
                   const SizedBox(height: 24),
@@ -192,6 +192,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       subtitle: 'Restore from file',
                       color: AppColors.primary,
                       onTap: _importData,
+                    ),
+                    _MenuItem(
+                      icon: Icons.dataset_rounded,
+                      title: 'Load Sample Data',
+                      subtitle: 'Populate with demo data',
+                      color: AppColors.accent,
+                      onTap: _showLoadSampleDataDialog,
                     ),
                   ]),
                   const SizedBox(height: 16),
@@ -315,15 +322,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildQuickStats(
     List<Wallet> wallets,
     List<Budget> budgets,
-    List<Credit> credits,
     List<Debt> debts,
     List<Loan> loans,
   ) {
     final totalBalance = wallets.fold<double>(0, (sum, w) => sum + w.balance);
+    final totalCreditOwed = wallets
+        .where((w) => w.type == 'Credit')
+        .fold<double>(0, (sum, w) => sum + w.usedCredit);
     final totalDebt =
         debts.fold<double>(0, (sum, d) => sum + d.remainingBalance) +
         loans.fold<double>(0, (sum, l) => sum + l.balance) +
-        credits.fold<double>(0, (sum, c) => sum + c.outstandingBalance);
+        totalCreditOwed;
     final upcomingBills = budgets
         .where((b) => b.status == 'Upcoming')
         .fold<double>(0, (sum, b) => sum + b.amount);
@@ -934,11 +943,58 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       // Reload all providers
       ref.read(walletsProvider.notifier).load();
       ref.read(budgetsProvider.notifier).load();
-      ref.read(creditsProvider.notifier).load();
       ref.read(debtsProvider.notifier).load();
       ref.read(loansProvider.notifier).load();
       ref.read(settingsProvider.notifier).reload();
     }
+  }
+
+  void _showLoadSampleDataDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.dataset_rounded, color: AppColors.accent, size: 24),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Load Sample Data?',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: const Text(
+          'This will clear your current data and load demo wallets, budgets, loans, debts, and credits. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await DatabaseService.clearAllData();
+              await DataSeeder.seedAll();
+              if (!mounted) return;
+              // Restart app to dashboard
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                (route) => false,
+              );
+            },
+            style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
+            child: const Text('Load Sample Data'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showResetDialog() {
@@ -982,7 +1038,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               // Reload all providers
               ref.read(walletsProvider.notifier).load();
               ref.read(budgetsProvider.notifier).load();
-              ref.read(creditsProvider.notifier).load();
               ref.read(debtsProvider.notifier).load();
               ref.read(loansProvider.notifier).load();
               ref.read(settingsProvider.notifier).reload();

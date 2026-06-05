@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../models/transaction.dart';
 import '../models/wallet.dart';
 import '../models/budget.dart';
-import '../models/credit.dart';
 import '../models/loan.dart';
 
 /// Extracts business logic from DashboardScreen for cleaner separation.
@@ -97,11 +96,11 @@ class DashboardHelper {
     return transactions;
   }
 
-  /// Build upcoming expense transactions from budgets, loans, and credits.
+  /// Build upcoming expense transactions from budgets, loans, and credit wallets.
   static List<Transaction> buildExpenseTransactions(
     List<Budget> budgets,
     List<Loan> loans,
-    List<Credit> credits,
+    List<Wallet> creditWallets,
   ) {
     final now = DateTime.now();
     final transactions = <Transaction>[];
@@ -147,15 +146,20 @@ class DashboardHelper {
       }
     }
 
-    for (final credit in credits) {
-      if (credit.status == 'Pending') {
-        final daysLeft = credit.dueDate.difference(now).inDays;
+    for (final wallet in creditWallets) {
+      final usedCredit = wallet.usedCredit;
+      if (usedCredit > 0 && wallet.dueDay != null) {
+        var dueDate = DateTime(now.year, now.month, wallet.dueDay!);
+        if (dueDate.isBefore(now) || dueDate.isAtSameMomentAs(now)) {
+          dueDate = DateTime(now.year, now.month + 1, wallet.dueDay!);
+        }
+        final daysLeft = dueDate.difference(now).inDays;
         transactions.add(
           Transaction(
-            id: '${credit.id}',
-            title: credit.name,
-            amount: credit.outstandingBalance,
-            date: credit.dueDate,
+            id: 'credit_${wallet.id}',
+            title: wallet.name,
+            amount: usedCredit,
+            date: dueDate,
             type: TransactionType.expense,
             icon: '💳',
             color: const Color(0xFF7C4DFF),

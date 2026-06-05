@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/wallet.dart';
 import '../models/budget.dart';
-import '../models/credit.dart';
 import '../models/loan.dart';
 import '../providers/settings_provider.dart';
 import '../providers/data_providers.dart';
@@ -242,7 +241,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget _buildHomePage() {
     final wallets = ref.watch(walletsProvider);
     final budgets = ref.watch(budgetsProvider);
-    final credits = ref.watch(creditsProvider);
     final loans = ref.watch(loansProvider);
     final settings = ref.watch(settingsProvider);
 
@@ -328,7 +326,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                   ..._buildConditionalSections(wallets, budgets),
                   const SizedBox(height: 20),
-                  _buildUpcomingTransactions(wallets, budgets, loans, credits),
+                  _buildUpcomingTransactions(wallets, budgets, loans),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -686,13 +684,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     List<Wallet> wallets,
     List<Budget> budgets,
     List<Loan> loans,
-    List<Credit> credits,
   ) {
+    final creditWallets = wallets.where((w) => w.type == 'Credit').toList();
     final income = DashboardHelper.buildIncomeTransactions(wallets);
     final expenses = DashboardHelper.buildExpenseTransactions(
       budgets,
       loans,
-      credits,
+      creditWallets,
     );
     return TransactionList(transactions: [...income, ...expenses]);
   }
@@ -709,7 +707,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void _refreshData() {
     ref.read(walletsProvider.notifier).load();
     ref.read(budgetsProvider.notifier).load();
-    ref.read(creditsProvider.notifier).load();
     ref.read(loansProvider.notifier).load();
   }
 }

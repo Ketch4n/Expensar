@@ -4,7 +4,6 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../models/wallet.dart';
 import '../models/budget.dart';
-import '../models/credit.dart';
 import '../models/debt.dart';
 import '../models/loan.dart';
 import '../providers/data_providers.dart';
@@ -19,7 +18,6 @@ class StatsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final wallets = ref.watch(walletsProvider);
     final budgets = ref.watch(budgetsProvider);
-    final credits = ref.watch(creditsProvider);
     final debts = ref.watch(debtsProvider);
     final loans = ref.watch(loansProvider);
 
@@ -39,9 +37,9 @@ class StatsScreen extends ConsumerWidget {
                     const SizedBox(height: 20),
                     _buildSpendingTrendChart(context, wallets),
                     const SizedBox(height: 20),
-                    _buildCategoryBreakdown(context, budgets, loans, credits),
+                    _buildCategoryBreakdown(context, budgets, loans, wallets),
                     const SizedBox(height: 20),
-                    _buildDebtSummary(context, debts, loans, credits),
+                    _buildDebtSummary(context, debts, loans, wallets),
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -288,7 +286,7 @@ class StatsScreen extends ConsumerWidget {
     BuildContext context,
     List<Budget> budgets,
     List<Loan> loans,
-    List<Credit> credits,
+    List<Wallet> wallets,
   ) {
     final categoryTotals = <String, double>{};
     for (final budget in budgets) {
@@ -306,8 +304,9 @@ class StatsScreen extends ConsumerWidget {
     if (loanTotal > 0) categoryTotals['Loans'] = loanTotal;
 
     double creditTotal = 0;
-    for (final credit in credits) {
-      if (credit.status == 'Pending') creditTotal += credit.outstandingBalance;
+    for (final wallet in wallets.where((w) => w.type == 'Credit')) {
+      final used = wallet.usedCredit;
+      if (used > 0) creditTotal += used;
     }
     if (creditTotal > 0) categoryTotals['Credit Cards'] = creditTotal;
 
@@ -430,17 +429,16 @@ class StatsScreen extends ConsumerWidget {
     BuildContext context,
     List<Debt> debts,
     List<Loan> loans,
-    List<Credit> credits,
+    List<Wallet> wallets,
   ) {
     final totalDebt = debts.fold<double>(
       0,
       (sum, d) => sum + d.remainingBalance,
     );
     final totalLoanBalance = loans.fold<double>(0, (sum, l) => sum + l.balance);
-    final totalCreditOwed = credits.fold<double>(
-      0,
-      (sum, c) => sum + c.outstandingBalance,
-    );
+    final totalCreditOwed = wallets
+        .where((w) => w.type == 'Credit')
+        .fold<double>(0, (sum, w) => sum + w.usedCredit);
     final totalOwed = totalDebt + totalLoanBalance + totalCreditOwed;
     final totalLoanPaid = loans.fold<double>(0, (sum, l) => sum + l.paidAmount);
 

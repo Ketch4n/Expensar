@@ -9,6 +9,7 @@ import 'theme/app_theme.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await DatabaseService.initialize();
+
   final onboardingComplete = await DatabaseService.getSetting(
     'onboardingComplete',
   );

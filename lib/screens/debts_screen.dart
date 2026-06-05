@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../models/debt.dart';
 import '../providers/data_providers.dart';
+import '../services/database_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_header.dart';
+import '../widgets/payment_bottom_sheet.dart';
 
 class DebtsScreen extends ConsumerWidget {
   const DebtsScreen({super.key});
@@ -23,7 +25,53 @@ class DebtsScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const AppHeader(title: 'Debts'),
+            AppHeader(
+              title: 'Debts',
+              trailing: GestureDetector(
+                onTap: () => _showAddDebtDialog(context, ref),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: context.isDark
+                        ? AppColors.primary.withValues(alpha: 0.1)
+                        : AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: context.isDark
+                        ? Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.4),
+                            width: 1,
+                          )
+                        : null,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.add,
+                        color: context.isDark
+                            ? AppColors.primaryLighter
+                            : Colors.white,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Add',
+                        style: TextStyle(
+                          color: context.isDark
+                              ? AppColors.primaryLighter
+                              : Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
@@ -104,6 +152,144 @@ class DebtsScreen extends ConsumerWidget {
     );
   }
 
+  void _showAddDebtDialog(BuildContext context, WidgetRef ref) {
+    final nameController = TextEditingController();
+    final amountController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: context.cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(24),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: context.isDark
+                          ? Colors.grey[600]
+                          : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Add Debt',
+                  style: AppTextStyles.heading.copyWith(
+                    color: context.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _buildTextField(
+                  context,
+                  nameController,
+                  'Person / Source',
+                  icon: Icons.person_outline,
+                ),
+                const SizedBox(height: 12),
+                _buildTextField(
+                  context,
+                  amountController,
+                  'Total Amount',
+                  icon: Icons.attach_money,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final name = nameController.text.trim();
+                      final amount = double.tryParse(
+                        amountController.text.trim(),
+                      );
+
+                      if (name.isEmpty || amount == null) return;
+
+                      final debt = Debt(
+                        name: name,
+                        totalAmount: amount,
+                        remainingBalance: amount,
+                        status: 'Pending',
+                      );
+
+                      await DatabaseService.insertDebt(debt);
+                      ref.read(debtsProvider.notifier).load();
+                      if (sheetContext.mounted) {
+                        Navigator.pop(sheetContext);
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Add Debt',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+    BuildContext context,
+    TextEditingController controller,
+    String label, {
+    IconData? icon,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      style: TextStyle(color: context.textPrimary),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: context.subtitleColor),
+        prefixIcon: icon != null
+            ? Icon(icon, color: context.subtitleColor, size: 20)
+            : null,
+        filled: true,
+        fillColor: context.isDark ? Colors.grey[800] : Colors.grey[100],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+      ),
+    );
+  }
+
   Widget _buildDebtCard(BuildContext context, Debt debt) {
     final isPaid = debt.status == 'Paid';
 
@@ -157,6 +343,22 @@ class DebtsScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showPaymentSheet(BuildContext context, Debt debt) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => PaymentBottomSheet(
+        paymentType: PaymentType.debt,
+        itemName: debt.name,
+        itemId: debt.id,
+        amountDue: null,
+        totalOutstanding: debt.remainingBalance,
+        onPaymentComplete: () {},
       ),
     );
   }
@@ -219,6 +421,30 @@ class DebtsScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            if (debt.status != 'Paid')
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      _showPaymentSheet(context, debt);
+                    },
+                    icon: const Icon(Icons.payment_rounded, size: 18),
+                    label: const Text('Log Payment'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            if (debt.status != 'Paid') const SizedBox(height: 12),
             Divider(height: 1, color: context.dividerColor),
             Expanded(
               child: debt.logs.isEmpty

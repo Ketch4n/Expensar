@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/wallet.dart';
+import '../models/account_group.dart';
 import '../models/budget.dart';
 import '../models/credit.dart';
 import '../models/debt.dart';
@@ -8,7 +9,7 @@ import '../models/loan.dart';
 
 class DatabaseService {
   static Database? _db;
-  static const int _version = 1;
+  static const int _version = 2;
 
   static Future<void> initialize() async {
     if (_db != null) return;
@@ -17,6 +18,7 @@ class DatabaseService {
       join(dbPath, 'expensar.db'),
       version: _version,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -25,7 +27,55 @@ class DatabaseService {
     return _db!;
   }
 
+  static Future<void> _onUpgrade(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 2) {
+      // Add account_groups table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS account_groups (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          sortOrder INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+
+      // Add new columns to wallets
+      await db.execute(
+        'ALTER TABLE wallets ADD COLUMN currency TEXT NOT NULL DEFAULT \'PHP\'',
+      );
+      await db.execute('ALTER TABLE wallets ADD COLUMN notes TEXT');
+      await db.execute(
+        'ALTER TABLE wallets ADD COLUMN includeInNetBalance INTEGER NOT NULL DEFAULT 1',
+      );
+      await db.execute('ALTER TABLE wallets ADD COLUMN groupId INTEGER');
+      await db.execute(
+        'ALTER TABLE wallets ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute('ALTER TABLE wallets ADD COLUMN creditLimit REAL');
+      await db.execute('ALTER TABLE wallets ADD COLUMN dueDay INTEGER');
+      await db.execute('ALTER TABLE wallets ADD COLUMN statementDay INTEGER');
+      await db.execute('ALTER TABLE wallets ADD COLUMN paymentAmount REAL');
+      await db.execute('ALTER TABLE wallets ADD COLUMN totalPayments INTEGER');
+      await db.execute(
+        'ALTER TABLE wallets ADD COLUMN completedPayments INTEGER',
+      );
+      await db.execute('ALTER TABLE wallets ADD COLUMN firstDueDate TEXT');
+      await db.execute('ALTER TABLE wallets ADD COLUMN loanStartDate TEXT');
+    }
+  }
+
   static Future<void> _onCreate(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE account_groups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        sortOrder INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
     await db.execute('''
       CREATE TABLE wallets (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,7 +85,20 @@ class DatabaseService {
         status TEXT,
         expectedPayoutDate TEXT,
         isRecurring INTEGER NOT NULL DEFAULT 0,
-        payDays TEXT NOT NULL DEFAULT ''
+        payDays TEXT NOT NULL DEFAULT '',
+        currency TEXT NOT NULL DEFAULT 'PHP',
+        notes TEXT,
+        includeInNetBalance INTEGER NOT NULL DEFAULT 1,
+        groupId INTEGER,
+        sortOrder INTEGER NOT NULL DEFAULT 0,
+        creditLimit REAL,
+        dueDay INTEGER,
+        statementDay INTEGER,
+        paymentAmount REAL,
+        totalPayments INTEGER,
+        completedPayments INTEGER,
+        firstDueDate TEXT,
+        loanStartDate TEXT
       )
     ''');
 
@@ -209,6 +272,41 @@ class DatabaseService {
 
   static Future<int> insertWalletLog(WalletLog log) async {
     return await db.insert('wallet_logs', log.toMap());
+  }
+
+  static Future<void> deleteWalletLog(int id) async {
+    await db.delete('wallet_logs', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // --- Account Groups ---
+
+  static Future<List<AccountGroup>> getAccountGroups() async {
+    final maps = await db.query('account_groups', orderBy: 'sortOrder ASC');
+    return maps.map(AccountGroup.fromMap).toList();
+  }
+
+  static Future<int> insertAccountGroup(AccountGroup group) async {
+    return await db.insert('account_groups', group.toMap());
+  }
+
+  static Future<void> updateAccountGroup(AccountGroup group) async {
+    await db.update(
+      'account_groups',
+      group.toMap(),
+      where: 'id = ?',
+      whereArgs: [group.id],
+    );
+  }
+
+  static Future<void> deleteAccountGroup(int id) async {
+    // Unassign wallets from this group first
+    await db.update(
+      'wallets',
+      {'groupId': null},
+      where: 'groupId = ?',
+      whereArgs: [id],
+    );
+    await db.delete('account_groups', where: 'id = ?', whereArgs: [id]);
   }
 
   // --- Budgets ---

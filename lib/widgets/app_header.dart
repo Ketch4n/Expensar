@@ -5,8 +5,14 @@ import '../theme/app_theme.dart';
 class AppHeader extends StatelessWidget {
   final String title;
   final bool showBackButton;
+  final Widget? trailing;
 
-  const AppHeader({super.key, required this.title, this.showBackButton = true});
+  const AppHeader({
+    super.key,
+    required this.title,
+    this.showBackButton = true,
+    this.trailing,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +33,7 @@ class AppHeader extends StatelessWidget {
               style: AppTextStyles.heading.copyWith(color: context.textPrimary),
             ),
           ),
+          if (trailing != null) trailing!,
         ],
       ),
     );
